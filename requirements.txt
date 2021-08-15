@@ -24,7 +24,6 @@ gast==0.3.3
 google-auth==1.30.0
 google-auth-oauthlib==0.4.4
 google-pasta==0.2.0
-Grid2Op @ file:///Grid2Op
 grpcio==1.37.1
 gym==0.18.0
 h5py==2.10.0
@@ -130,3 +129,8 @@ Werkzeug==2.0.1
 widgetsnbextension==3.5.1
 wrapt==1.12.1
 zipp==3.4.1
+
+hydra-core==1.0.6
+hydra_colorlog
+wandb
+
