@@ -34,6 +34,7 @@ if __name__ == "__main__":
     max_timestep = 10  # 最大时间步数
     max_episode = 1  # 回合数
 
-    my_agent = RandomAgent(settings.num_gen)
+    # my_agent = RandomAgent(settings.num_gen)
+    my_agent = DoNothingAgent(settings.num_gen)
 
     run_task(my_agent)
