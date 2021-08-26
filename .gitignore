@@ -2,6 +2,8 @@
 *.doc
 *.zip
 *.rar
+*.tar.gz
+*__pycache__*
 说明*
 paddle_torch_tf*
 /submission
