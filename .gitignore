@@ -4,6 +4,9 @@
 *.rar
 *.tar.gz
 *__pycache__*
+.vscode
+outputs/
+playground.py
 说明*
 paddle_torch_tf*
 /submission
