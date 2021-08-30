@@ -16,6 +16,11 @@ COPY apt.txt /tmp/apt.txt
 RUN apt -qq update && apt -qq install -y --no-install-recommends `cat /tmp/apt.txt` \
  && rm -rf /var/cache/*
 
+# Unicode support:
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
 
 WORKDIR ${HOME_DIR}
 
@@ -33,7 +38,10 @@ RUN conda install cmake -y && conda clean -y -a
 
 COPY --chown=1006:1006 requirements.txt ${HOME_DIR}/requirements.txt
 RUN conda install python==3.6.9 -y
+
 RUN pip install -r requirements.txt --no-cache-dir
+
+RUN conda install paddlepaddle-gpu==2.1.2 cudatoolkit=10.2 --channel https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/Paddle/
 
 
 # Set up user
