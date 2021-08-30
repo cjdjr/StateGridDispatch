@@ -9,7 +9,7 @@ class SAC_GridAgent(parl.Agent):
 
         self.device = torch.device("cuda" if torch.cuda.
                                    is_available() else "cpu")
-
+        # self.device = torch.device(device)
         self.alg.sync_target(decay=0)
 
     def predict(self, obs):

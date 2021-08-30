@@ -41,7 +41,7 @@ def get_env():
     env = wrap_env(env, settings)
     return env
 
-# @parl.remote_class
+@parl.remote_class
 class Actor(object):
     def __init__(self, flags):
         # print("ok")
@@ -74,19 +74,20 @@ class Actor(object):
         self.agent.set_weights(weights)
         obs = self.env.reset()
         done = False
-        episode_env_reward, episode_steps = 0, 0
+        episode_training_reward, episode_env_reward, episode_steps = 0, 0, 0
         sample_data = []
         
         # Semi-MDP RL
         
         # jump to the first overflowed obs 
         while not done:
-            if not self.env.has_overflow:
+            if not self.env.has_emergency:
                 # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
                 next_obs, reward, done, info = self.env.step(self.do_nothing_action)
                 obs = next_obs
                 
-                episode_env_reward += reward
+                episode_env_reward += info['origin_reward']
+                episode_training_reward += reward
                 episode_steps += 1
             else:
                 break
@@ -102,19 +103,21 @@ class Actor(object):
             next_obs, reward, done, info = self.env.step(action)
             cumulative_discounted_reward = reward
             
-            episode_env_reward += reward
+            episode_env_reward += info['origin_reward']
+            episode_training_reward += reward
             episode_steps += 1
             
             # jump to the next overflowed obs 
             while not done:
                 step = 0
-                if not self.env.has_overflow:
+                if not self.env.has_emergency:
                     # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
                     step += 1
                     next_obs, reward, done, info = self.env.step(self.do_nothing_action)
                     cumulative_discounted_reward += (self.flags.GAMMA ** step) * reward
                     
-                    episode_env_reward += reward
+                    episode_env_reward += info['origin_reward']
+                    episode_training_reward += reward
                     episode_steps += 1
                 else:
                     break
@@ -125,7 +128,7 @@ class Actor(object):
 
             obs = next_obs
 
-        return sample_data, episode_env_reward, episode_steps
+        return sample_data, episode_env_reward, episode_training_reward, episode_steps
 
 class Learner(object):
     def __init__(self, flags):
@@ -152,6 +155,7 @@ class Learner(object):
 
         self.total_steps = 0          # 环境交互的所有步数
         self.total_MDP_steps = 0      # 强化模型决策的所有步数
+        self.mean_episode_training_reward = WindowStat(100)
         self.mean_episode_env_reward = WindowStat(100)
         self.mean_episode_steps = WindowStat(100)
 
@@ -183,7 +187,7 @@ class Learner(object):
             if self.rpm.size() < self.flags.WARMUP_STEPS:
                 random_action = True
 
-            sample_data, episode_env_reward, episode_steps = actor.sample(weights, random_action)
+            sample_data, episode_env_reward, episode_training_reward, episode_steps = actor.sample(weights, random_action)
 
             # Store data in replay memory
             with self.rpm_lock:
@@ -200,14 +204,20 @@ class Learner(object):
                         batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = self.rpm.sample_batch(
                             self.flags.BATCH_SIZE)
                     with self.model_lock:
-                            self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs,
-                                    batch_terminal)
+                        critic_loss, actor_loss = self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
+                        if self.flags.wandb:
+                            loss = {}
+                            loss['critic_loss'] = critic_loss.item()
+                            loss['actor_loss'] = actor_loss.item()
+                            wandb.log(loss, step=self.total_steps)
+
             learn_time = time.time() - start
 
             with self.log_lock:
                 self.total_steps += episode_steps
                 self.total_MDP_steps += len(sample_data)
                 self.mean_episode_env_reward.add(episode_env_reward)
+                self.mean_episode_training_reward.add(episode_training_reward)
                 self.mean_episode_steps.add(episode_steps)
 
                 if self.total_steps // self.flags.LOG_EVERY_STEPS > self.log_cnt:
@@ -217,6 +227,7 @@ class Learner(object):
                     stats['step'] = self.total_steps
                     stats['total_MDP_steps'] = self.total_MDP_steps
                     stats['mean_episode_env_reward'] = self.mean_episode_env_reward.mean
+                    stats['mean_episode_training_reward'] = self.mean_episode_training_reward.mean
                     stats['mean_episode_steps'] = self.mean_episode_steps.mean
 
                     # tensorboard.add_scalar('mean_episode_env_reward', self.mean_episode_env_reward.mean, self.total_steps)

@@ -82,9 +82,11 @@ class MaxTimestepWrapper(Wrapper):
 
 class ObsTransformerWrapper(Wrapper):
 
-    def __init__(self, env):
+    def __init__(self, env, settings):
         super(ObsTransformerWrapper,self).__init__(env)
+        self.settings = settings
         self.has_overflow = False # Add an attribute to mark whether the env has overflowed lines.. 
+        self.has_overbalance = False
 
     def _get_obs(self, obs):
 
@@ -111,6 +113,7 @@ class ObsTransformerWrapper(Wrapper):
     def step(self, action, **kwargs):
         raw_obs, reward, done, info = self.env.step(action, **kwargs)
         self.has_overflow = self._has_overflow(raw_obs)
+        self.has_overbalance = self._has_overbalance(raw_obs)
         obs = self._get_obs(raw_obs)
         return obs, reward, done, info
 
@@ -125,6 +128,20 @@ class ObsTransformerWrapper(Wrapper):
         if obs is not None and not any(np.isnan(obs.rho)):
             has_overflow = any(np.array(obs.rho) > 1.0)
         return has_overflow
+
+    def _has_overbalance(self, obs):
+        has_overbalance = False
+        balanced_id = self.settings.balanced_id
+        max_gen_p = self.settings.max_gen_p[balanced_id]
+        min_gen_p = self.settings.min_gen_p[balanced_id]
+        if obs is not None:
+            dispatch = obs.actual_dispatch[balanced_id]
+            has_overbalance = dispatch > max_gen_p or dispatch < min_gen_p
+        return has_overbalance
+
+    @property
+    def has_emergency(self):
+        return self.has_overflow or self.has_overbalance
 
 
 class ActionMappingWrapper(Wrapper):
@@ -170,6 +187,22 @@ class ActionMappingWrapper(Wrapper):
         self.last_obs = info[0]
         return info
 
+class RewardWrapper(Wrapper):
+
+    def __init__(self, env):
+        super(RewardWrapper,self).__init__(env)
+   
+    def step(self, action, **kwargs):
+        obs, reward, done, info = self.env.step(action, **kwargs)
+        training_reward = reward
+        if done and not info["timeout"]:
+            training_reward -= 10.0
+        info["origin_reward"] = reward
+        return obs, training_reward, done, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+    
 def wrap_action(action):
     N = len(action)
     act = {
@@ -180,6 +213,7 @@ def wrap_action(action):
 
 def wrap_env(env, settings):
     env = MaxTimestepWrapper(env)
+    env = RewardWrapper(env)
     env = ActionMappingWrapper(env, settings)
-    env = ObsTransformerWrapper(env)
+    env = ObsTransformerWrapper(env, settings)
     return env
