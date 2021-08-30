@@ -5,9 +5,12 @@ from utilize.line_cutting import Disconnect
 from utilize.action_space import ActionSpace
 from utilize.legal_action import *
 from gym import spaces
+
 import example
 import copy
 import numpy as np
+
+import os
 
 
 class Environment:
@@ -59,7 +62,12 @@ class Environment:
                       settings.gen_q_filepath)
 
         injection_gen_p = self._round_p(grid.itime_unp[0])
+
+        workdir = os.getcwd()
+        os.chdir(os.path.dirname(os.path.abspath(__file__))+"/../")
         grid.env_feedback(settings.name_index, injection_gen_p, [], row_idx, [])
+        os.chdir(workdir)
+
         rounded_gen_p = self._round_p(grid.prod_p[0])
 
         self._update_gen_status(injection_gen_p)
@@ -135,7 +143,10 @@ class Environment:
         self._update_gen_status(injection_gen_p)
 
         # Power flow calculation
+        workdir = os.getcwd()
+        os.chdir(os.path.dirname(os.path.abspath(__file__))+"/../")
         grid.env_feedback(grid.un_nameindex, injection_gen_p, injection_gen_v, row_idx, disc_name)
+        os.chdir(workdir)
 
         flag, info = self.check_done(grid, settings)
         if flag:
