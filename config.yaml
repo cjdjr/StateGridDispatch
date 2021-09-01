@@ -5,7 +5,7 @@ group: group1
 run_name: Baseline_10000_warmup-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
-WARMUP_STEPS: 10000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
+WARMUP_STEPS: 1000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
 MEMORY_SIZE:  1000000       # 经验池大小
 BATCH_SIZE:   256           # 训练一个BATCH的样本数
 GAMMA:        0.99          # 衰减系数
@@ -15,8 +15,8 @@ ACTOR_LR:     3e-4               # Actor网络的学习率
 CRITIC_LR:    3e-4              # Critic网络的学习率 
 OBS_DIM:      819                 # 经过特征提取后的观测量维度
 ACT_DIM:      54                  # 动作维度
-ACTOR_NUM:    2                # 并行采样的actor数量
-
+ACTOR_NUM:    16                # 并行采样的actor数量
+ACTOR_DEVICE: 'cpu'
 # clamp bounds for Std of action_log
 LOG_SIG_MAX:  2.0
 LOG_SIG_MIN:  -20.0

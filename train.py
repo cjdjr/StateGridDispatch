@@ -54,6 +54,8 @@ class Actor(object):
         model = GridModel(obs_dim, action_dim, flags)
         # print(model.get_actor_params())
         # print(model.get_critic_params())
+        device = flags.ACTOR_DEVICE
+        # device="cuda" if torch.cuda.is_available() else "cpu")
         algorithm = SAC(
             model,
             gamma=flags.GAMMA,
@@ -61,9 +63,9 @@ class Actor(object):
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
-            device='cpu')
+            device=device)
 
-        self.agent = SAC_GridAgent(algorithm)
+        self.agent = SAC_GridAgent(algorithm, device=device)
         self.do_nothing_action = np.zeros(flags.ACT_DIM) # The adjustments of power generators are zeros.
 
 
@@ -162,6 +164,7 @@ class Learner(object):
 
         # Initialize model, algorithm, agent, replay_memory
         model = GridModel(obs_dim, action_dim, flags)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         algorithm = SAC(
             model,
             gamma=flags.GAMMA,
@@ -169,8 +172,8 @@ class Learner(object):
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
-            device="cuda" if torch.cuda.is_available() else "cpu")
-        self.agent = SAC_GridAgent(algorithm)
+            device=device)
+        self.agent = SAC_GridAgent(algorithm, device=device)
         self.rpm = ReplayMemory(
             max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim)
 
@@ -235,6 +238,7 @@ class Learner(object):
             learn_time = time.time() - start
 
             with self.log_lock:
+                # logging.info("sample_time: {}      learn_time: {}   ".format(sample_time, learn_time))
                 self.total_steps += episode_steps
                 self.total_MDP_steps += len(sample_data)
                 self.mean_episode_env_reward.add(episode_env_reward)
