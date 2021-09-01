@@ -9,23 +9,22 @@ import hydra
 from omegaconf import OmegaConf, DictConfig
 import wandb
 import numpy as np
-import argparse
 import torch
 import threading
 import time
 import parl
-from parl.utils import tensorboard, ReplayMemory
-from parl.algorithms import SAC
+from parl.utils import ReplayMemory
+# from parl.algorithms import SAC
 from parl.utils.window_stat import WindowStat
 
 from gridsim_master_0811.Environment.base_env import Environment
 from gridsim_master_0811.utilize.settings import settings
 
-from model.agent import Agent
 from model.grid_agent import SAC_GridAgent
 from model.grid_model import GridModel
 from model.env_wrapper import wrap_env
-
+from model.algo import SAC
+# from gridsim_master_0811.env_wrapper import get_env
 def get_common_flags(flags):
     flags = OmegaConf.to_container(flags)
     flags["SAVE_DIR"] = os.getcwd()
@@ -61,7 +60,8 @@ class Actor(object):
             tau=flags.TAU,
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
-            critic_lr=flags.CRITIC_LR)
+            critic_lr=flags.CRITIC_LR,
+            device='cpu')
 
         self.agent = SAC_GridAgent(algorithm)
         self.do_nothing_action = np.zeros(flags.ACT_DIM) # The adjustments of power generators are zeros.
@@ -77,22 +77,8 @@ class Actor(object):
         episode_training_reward, episode_env_reward, episode_steps = 0, 0, 0
         sample_data = []
         
-        # Semi-MDP RL
-        
-        # jump to the first overflowed obs 
+        # MDP RL
         while not done:
-            if not self.env.has_emergency:
-                # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
-                next_obs, reward, done, info = self.env.step(self.do_nothing_action)
-                obs = next_obs
-                
-                episode_env_reward += info['origin_reward']
-                episode_training_reward += reward
-                episode_steps += 1
-            else:
-                break
-                
-        while not done:       
             # Select action randomly or according to policy
             if random_action:
                 action = np.random.uniform(-1, 1, size=self.action_dim)
@@ -101,32 +87,66 @@ class Actor(object):
 
             # Perform action
             next_obs, reward, done, info = self.env.step(action)
-            cumulative_discounted_reward = reward
-            
-            episode_env_reward += info['origin_reward']
-            episode_training_reward += reward
-            episode_steps += 1
-            
-            # jump to the next overflowed obs 
-            while not done:
-                step = 0
-                if not self.env.has_emergency:
-                    # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
-                    step += 1
-                    next_obs, reward, done, info = self.env.step(self.do_nothing_action)
-                    cumulative_discounted_reward += (self.flags.GAMMA ** step) * reward
-                    
-                    episode_env_reward += info['origin_reward']
-                    episode_training_reward += reward
-                    episode_steps += 1
-                else:
-                    break
-                    
             terminal = done and not info['timeout']
             terminal = float(terminal)
-            sample_data.append((obs, action, cumulative_discounted_reward, next_obs, terminal))     
+
+            sample_data.append((obs, action, reward, next_obs, terminal))
 
             obs = next_obs
+            episode_training_reward += reward
+            episode_env_reward += info['origin_reward']
+            episode_steps += 1
+
+        # # Semi-MDP RL
+        
+        # # jump to the first overflowed obs 
+        # while not done:
+        #     if not self.env.has_emergency:
+        #         # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
+        #         next_obs, reward, done, info = self.env.step(self.do_nothing_action)
+        #         obs = next_obs
+                
+        #         episode_env_reward += info['origin_reward']
+        #         episode_training_reward += reward
+        #         episode_steps += 1
+        #     else:
+        #         break
+                
+        # while not done:       
+        #     # Select action randomly or according to policy
+        #     if random_action:
+        #         action = np.random.uniform(-1, 1, size=self.action_dim)
+        #     else:
+        #         action = self.agent.sample(obs)
+
+        #     # Perform action
+        #     next_obs, reward, done, info = self.env.step(action)
+        #     cumulative_discounted_reward = reward
+            
+        #     episode_env_reward += info['origin_reward']
+        #     episode_training_reward += reward
+        #     episode_steps += 1
+            
+        #     # jump to the next overflowed obs 
+        #     while not done:
+        #         step = 0
+        #         if not self.env.has_emergency:
+        #             # Expert rule: use do-nothing action when the grid doesn't have overflow lines.
+        #             step += 1
+        #             next_obs, reward, done, info = self.env.step(self.do_nothing_action)
+        #             cumulative_discounted_reward += (self.flags.GAMMA ** step) * reward
+                    
+        #             episode_env_reward += info['origin_reward']
+        #             episode_training_reward += reward
+        #             episode_steps += 1
+        #         else:
+        #             break
+                    
+        #     terminal = done and not info['timeout']
+        #     terminal = float(terminal)
+        #     sample_data.append((obs, action, cumulative_discounted_reward, next_obs, terminal))     
+
+        #     obs = next_obs
 
         return sample_data, episode_env_reward, episode_training_reward, episode_steps
 
@@ -148,7 +168,8 @@ class Learner(object):
             tau=flags.TAU,
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
-            critic_lr=flags.CRITIC_LR)
+            critic_lr=flags.CRITIC_LR,
+            device="cuda" if torch.cuda.is_available() else "cpu")
         self.agent = SAC_GridAgent(algorithm)
         self.rpm = ReplayMemory(
             max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim)
@@ -278,8 +299,9 @@ def main(flags: DictConfig):
 
     # env = Environment(settings, "EPRIReward")
     # env = wrap_env(env, settings)
-
-    parl.connect("localhost:8010")
+    parl.connect(
+        "localhost:8010",
+    )
     time.sleep(10) # wait for connecting
 
     learner = Learner(flags)

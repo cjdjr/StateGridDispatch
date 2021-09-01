@@ -52,13 +52,13 @@ class CriticModel(parl.Model):
         super(CriticModel, self).__init__()
 
         # Q1 network
-        self.l1 = nn.Linear(obs_dim + action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
+        self.l1 = nn.Linear(obs_dim + action_dim, 512)
+        self.l2 = nn.Linear(512, 256)
         self.l3 = nn.Linear(256, 1)
 
         # Q2 network
-        self.l4 = nn.Linear(obs_dim + action_dim, 256)
-        self.l5 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(obs_dim + action_dim, 512)
+        self.l5 = nn.Linear(512, 256)
         self.l6 = nn.Linear(256, 1)
 
     def forward(self, obs, action):
