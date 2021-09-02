@@ -180,7 +180,7 @@ class ActionMappingWrapper(Wrapper):
         gen_p_low_bound = gen_p_action_space.low
         gen_p_high_bound = gen_p_action_space.high
 
-        # gen_v_action_space = self.last_obs.action_space['adjust_gen_v']
+        # gen_v_action_space = self.env.raw_obs.action_space['adjust_gen_v']
 
         # gen_v_low_bound = gen_v_action_space.low
         # gen_v_high_bound = gen_v_action_space.high
@@ -206,10 +206,10 @@ class RewardWrapper(Wrapper):
    
     def step(self, action, **kwargs):
         obs, reward, done, info = self.env.step(action, **kwargs)
-        training_reward = 1.0
-        # training_reward = reward
-        # if done and not info["timeout"]:
-        #     training_reward -= 10.0
+        # training_reward = 1.0
+        training_reward = reward
+        if done and not info["timeout"]:
+            training_reward -= 10.0
         info["origin_reward"] = reward
         return obs, training_reward, done, info
 

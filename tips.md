@@ -13,3 +13,5 @@
 * 数字表示当前电网断线条数，DPF failed表示潮流不收敛
 
 * os.environ['PARL_BACKEND'] = 'torch' 要放到import parl之前
+
+* adjust_gen_v 学不出来
