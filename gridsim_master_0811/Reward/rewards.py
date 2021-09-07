@@ -63,3 +63,14 @@ def EPRIReward(obs, last_obs, settings):
         settings.coeff_gen_reactive_power * gen_reactive_power_reward(obs, settings) + \
         settings.coeff_sub_voltage * sub_voltage_reward(obs, settings)
     return r
+
+def AllReward(obs, last_obs, settings):
+    r = {}
+    r['line_over_flow_reward'] = line_over_flow_reward(obs, settings)
+    r['renewable_consumption_reward'] = renewable_consumption_reward(obs, settings)
+    r['running_cost_reward'] = running_cost_reward(obs, last_obs, settings)
+    r['balanced_gen_reward'] = balanced_gen_reward(obs, settings)
+    r['gen_reactive_power_reward'] = gen_reactive_power_reward(obs, settings)
+    r['sub_voltage_reward'] = sub_voltage_reward(obs, settings)
+    r['score'] = EPRIReward(obs, last_obs, settings)
+    return r
