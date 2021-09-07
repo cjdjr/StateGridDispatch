@@ -114,9 +114,14 @@ class ObsTransformerWrapper(Wrapper):
         action_space_low[self.settings.balanced_id] = 0.0
         action_space_high[self.settings.balanced_id] = 0.0
         
+        # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
+        steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
+        steps_to_close_gen = obs.steps_to_close_gen.tolist()
+
         features = np.concatenate([
             loads, prods,
-            rho.tolist(), next_load, action_space_low, action_space_high
+            rho.tolist(), next_load, action_space_low, action_space_high,
+            steps_to_recover_gen
         ])
 
         return features
@@ -189,7 +194,10 @@ class ActionMappingWrapper(Wrapper):
         # high_bound = np.concatenate([gen_p_high_bound, gen_v_high_bound])
         low_bound = gen_p_low_bound
         high_bound = gen_p_high_bound
-    
+
+        for id in self.settings.renewable_ids:
+            low_bound[id] = high_bound[id]
+            
         mapped_action = low_bound + (model_output_act - (-1.0)) * (
             (high_bound - low_bound) / 2.0)
         mapped_action[self.settings.balanced_id] = 0.0

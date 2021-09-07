@@ -14,7 +14,7 @@ def wrap_action(adjust_gen_p):
     }
     return act
 
-OBS_DIM = 819
+OBS_DIM = 819 + 54
 ACT_DIM = 54
 
 
@@ -23,7 +23,7 @@ class Agent(object):
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/checkpoint-200080.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/checkpoint-2650192.tar")
 
         model = GridModel(OBS_DIM, ACT_DIM)
         
@@ -37,6 +37,7 @@ class Agent(object):
         # print("finish process obs")
         action = self.agent.predict(features)
         # print("finish predict")
+        self.action = action
         ret_action = self._process_action(obs, action)
         # print("finish process act")
         return ret_action
@@ -67,9 +68,12 @@ class Agent(object):
         action_space_low[self.settings.balanced_id] = 0.0
         action_space_high[self.settings.balanced_id] = 0.0
         
+        steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
+
         features = np.concatenate([
             loads, prods,
-            rho.tolist(), next_load, action_space_low, action_space_high
+            rho.tolist(), next_load, action_space_low, action_space_high,
+            steps_to_recover_gen
         ])
 
         return features
@@ -81,6 +85,9 @@ class Agent(object):
 
         low_bound = gen_p_action_space.low
         high_bound = gen_p_action_space.high
+
+        for id in self.settings.renewable_ids:
+            low_bound[id] = high_bound[id]
 
         mapped_action = low_bound + (action - (-1.0)) * (
             (high_bound - low_bound) / 2.0)

@@ -15,3 +15,7 @@
 * os.environ['PARL_BACKEND'] = 'torch' 要放到import parl之前
 
 * adjust_gen_v 学不出来
+
+* 现在的一个问题是，当初始停机的过多，会在timestep为40的时候集中开机，导致agent的决策过于奔放，会在timestep=40的时候直接平衡机越限。
+
+* 加上 steps_to_close_gen 学不出来
