@@ -103,7 +103,23 @@ class TimeoutContext(object):
         # Cancel the timer if the function returned before timeout
         signal.alarm(0)
 ####
+'''
+seed : 1234
 
+3300228.pth
+steps :    [288.0, 32.0, 288.0, 288.0, 288.0, 288.0, 288.0, 37.0, 288.0, 288.0, 41.0, 288.0, 288.0, 288.0, 288.0, 288.0, 288.0, 288.0, 288.0, 37.0]
+scores :    [496.2975680669143, 31.597569051327095, 500.9423893872262, 481.21696899178215, 487.62707878303814, 485.0123982215625, 501.2344270787347, 55.72123536336498, 454.024699994048, 473.5713977843327, 58.14754650788086, 463.80197472167123, 494.537135905989, 488.2880884887793, 493.23378902980096, 492.3303103068049, 493.1923243072265, 485.032625260861, 488.26140603710223, 40.22354333103439]
+infos :     [{}, {'fail_info': 'grid is not converged'}, {}, {}, {}, {}, {}, {'fail_info': 'balance gen out of bound'}, {}, {}, {'fail_info': 'balance gen out of bound'}, {}, {}, {}, {}, {}, {}, {}, {}, {'fail_info': 'balance gen out of bound'}]
+[Succ]
+Score = 398.2147
+
+5750029.pth
+steps :    [288.0, 40.0, 288.0, 288.0, 288.0, 288.0, 288.0, 36.0, 288.0, 288.0, 28.0, 288.0, 288.0, 288.0, 288.0, 40.0, 28.0, 288.0, 288.0, 6.0]
+scores :    [494.78476895891333, 45.32768837395827, 487.44123329114996, 490.1231273888009, 489.9898952254427, 482.0189564601643, 487.19539577939344, 56.3238784230821, 438.25882988027575, 470.0930020418596, 42.78810862180067, 414.54947183528895, 485.65431839293785, 485.10459610458605, 496.37151229304357, 62.436846900454206, 31.45974262441625, 483.46820376028234, 481.18648738062245, 6.757791025718808]
+infos :     [{}, {'fail_info': 'balance gen out of bound'}, {}, {}, {}, {}, {}, {'fail_info': 'balance gen out of bound'}, {}, {}, {'fail_info': 'balance gen out of bound'}, {}, {}, {}, {}, {'fail_info': 'balance gen out of bound'}, {'fail_info': 'balance gen out of bound'}, {}, {}, {'fail_info': 'balance gen out of bound'}]
+[Succ]
+Score = 346.5667
+'''
 
 import os
 import copy
@@ -113,6 +129,8 @@ import numpy as np
 from gridsim_master_0811.Environment.base_env import Environment
 from gridsim_master_0811.utilize.settings import settings
 
+steps = []
+infos = []
 def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout):
     print("start_idx: ", start_idx)
     obs = env.reset(seed=seed, start_sample_idx=start_idx)
@@ -133,20 +151,20 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
             if isinstance(e, TimeoutException):
                 raise AgentActTimeout()
             raise AgentActException(str(e))
-        if step>=1:
-            # action = last_action
-            # low_bound = obs.action_space['adjust_gen_p'].low
-            # high_bound = obs.action_space['adjust_gen_p'].high
+        if step>=39:
+            action = last_action
+            low_bound = obs.action_space['adjust_gen_p'].low
+            high_bound = obs.action_space['adjust_gen_p'].high
 
-            # for id in settings.renewable_ids:
-            #     low_bound[id] = high_bound[id]
+            for id in settings.renewable_ids:
+                low_bound[id] = high_bound[id]
 
-            # action['adjust_gen_p'] = np.clip(action['adjust_gen_p'], low_bound, high_bound)
+            action['adjust_gen_p'] = np.clip(action['adjust_gen_p'], low_bound, high_bound)
             pass
         try:
+            obs, reward, done, info = env.step(action)
             last_obs = obs
             last_action = action
-            obs, reward, done, info = env.step(action)
         except Exception as e:
             if isinstance(e, TimeoutException):
                 raise TimeoutException()
@@ -158,6 +176,8 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
             break
     print("step: ",sum_steps)
     print("info: ",info)
+    steps.append(sum_steps)
+    infos.append(info)
     return sum_reward
 
 
@@ -196,7 +216,7 @@ def eval(submit_file=None):
             np.random.seed(1234)
             idx = np.random.randint(settings.num_sample, size=20)
             # 1 -> step = 40
-            for start_idx in idx[1:2]:
+            for start_idx in idx:
                 # start_idx = 4654
                 score = run_one_episode(env, SEED, start_idx, episode_max_steps, agent, ACT_TIMEOUT)
                 scores.append(score)
@@ -209,7 +229,9 @@ def eval(submit_file=None):
             raise e
 
     mean_score = np.mean(scores)
-
+    print("steps :   ",steps)
+    print("scores :   ",scores)
+    print("infos :    ",infos)
     return {'score': mean_score}
 
 if __name__ == "__main__":

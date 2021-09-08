@@ -2,7 +2,7 @@ wandb: true
 project: griddispatch_challenge
 entity: chelly
 group: group1
-run_name: Baseline-origin_reward-obs_recover_gen-${now:%Y%m%dT%H%M%S}
+run_name: Baseline-origin_reward-obs_recover_gen-obs_remove_actspace-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
 WARMUP_STEPS: 10000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
@@ -14,9 +14,9 @@ ALPHA:        0.2           # SAC算法超参（平衡entroy和奖励的重要�
 
 ACTOR_LR:     3e-4               # Actor网络的学习率 
 CRITIC_LR:    3e-4              # Critic网络的学习率 
-OBS_DIM:      873                 # 819 873 927
+OBS_DIM:      765                 # 819 873 927
 ACT_DIM:      54                  # 动作维度
-ACTOR_NUM:    16                # 并行采样的actor数量
+ACTOR_NUM:    8                # 并行采样的actor数量
 ACTOR_DEVICE: 'cpu'
 # clamp bounds for Std of action_log
 LOG_SIG_MAX:  2.0

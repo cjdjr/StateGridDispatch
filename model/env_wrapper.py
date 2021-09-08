@@ -116,12 +116,15 @@ class ObsTransformerWrapper(Wrapper):
         
         # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
         steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
+        gen_status = obs.gen_status.tolist()
         steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
         features = np.concatenate([
             loads, prods,
-            rho.tolist(), next_load, action_space_low, action_space_high,
-            steps_to_recover_gen
+            rho.tolist(), next_load, 
+            # action_space_low, action_space_high,
+            steps_to_recover_gen,
+            # gen_status
         ])
 
         return features
