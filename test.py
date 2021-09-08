@@ -134,16 +134,16 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
             if isinstance(e, TimeoutException):
                 raise AgentActTimeout()
             raise AgentActException(str(e))
-        if step>=39:
-            action = last_action
-            low_bound = obs.action_space['adjust_gen_p'].low
-            high_bound = obs.action_space['adjust_gen_p'].high
+        # if step>=39:
+        #     action = last_action
+        #     low_bound = obs.action_space['adjust_gen_p'].low
+        #     high_bound = obs.action_space['adjust_gen_p'].high
 
-            for id in settings.renewable_ids:
-                low_bound[id] = high_bound[id]
+        #     for id in settings.renewable_ids:
+        #         low_bound[id] = high_bound[id]
 
-            action['adjust_gen_p'] = np.clip(action['adjust_gen_p'], low_bound, high_bound)
-            pass
+        #     action['adjust_gen_p'] = np.clip(action['adjust_gen_p'], low_bound, high_bound)
+        #     pass
         try:
             obs, reward, done, info = env.step(action)
             last_obs = obs
