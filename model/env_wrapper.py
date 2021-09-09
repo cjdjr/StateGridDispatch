@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 from parl.utils import logger
+from wandb import Settings
 
 class Wrapper(gym.Env):
     """Wraps the environment to allow a modular transformation.
@@ -108,22 +109,30 @@ class ObsTransformerWrapper(Wrapper):
 
         next_load = obs.nextstep_load_p
 
+        balanced_id = self.settings.balanced_id
         # action_space
         action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
         action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
-        action_space_low[self.settings.balanced_id] = 0.0
-        action_space_high[self.settings.balanced_id] = 0.0
+        action_space_low[balanced_id] = 0.0
+        action_space_high[balanced_id] = 0.0
         
         # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
         steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
         gen_status = obs.gen_status.tolist()
         steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
+        balance_gen_p_limit = [
+            self.settings['max_gen_p'][balanced_id] - obs.gen_p[balanced_id], 
+            obs.gen_p[balanced_id] - self.settings['min_gen_p'][balanced_id]
+            ]
+
+
         features = np.concatenate([
             loads, prods,
             rho.tolist(), next_load, 
-            # action_space_low, action_space_high,
+            action_space_low, action_space_high,
             steps_to_recover_gen,
+            balance_gen_p_limit,
             # gen_status
         ])
 
