@@ -196,10 +196,10 @@ def eval(submit_file=None):
 
             episode_max_steps = 288
             scores = []
-            np.random.seed(1234)
+            np.random.seed(0)
             idx = np.random.randint(settings.num_sample, size=20)
             # 1 -> step = 40
-            for start_idx in idx:
+            for start_idx in idx[14:15]:
                 # start_idx = 4654
                 score = run_one_episode(env, SEED, start_idx, episode_max_steps, agent, ACT_TIMEOUT)
                 scores.append(score)
