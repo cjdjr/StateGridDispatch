@@ -111,16 +111,23 @@ class ObsTransformerWrapper(Wrapper):
         # action_space
         action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
         action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
+        for id in self.settings.renewable_ids:
+            action_space_low[id] = action_space_high[id]
         action_space_low[self.settings.balanced_id] = 0.0
         action_space_high[self.settings.balanced_id] = 0.0
         
         # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
         steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
-        gen_status = obs.gen_status.tolist()
+        # gen_status = obs.gen_status.tolist()
+        # 1 stands for can be opened
+        gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float).tolist()
         steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
+        gen_features = np.concatenate([prods, action_space_low, action_space_high, steps_to_recover_gen, gen_status])
+        gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*self.settings.num_gen)
+        
         features = np.concatenate([
-            prods, action_space_low, action_space_high, steps_to_recover_gen, gen_status,
+            gen_features.tolist(),
             loads,
             rho.tolist(), next_load
             # gen_status
