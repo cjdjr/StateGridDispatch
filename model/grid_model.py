@@ -14,6 +14,8 @@ class GridModel(parl.Model):
         self.gen_num = flags.gen_num
 
         self.gen_projection_layer = nn.Linear(self.gen_input_dim, self.embedding_dim)
+        self.gen_embedding = None
+        self.gen_status = None
         self.others_projection_layer = nn.Linear(obs_dim - self.gen_num * self.gen_input_dim, 256)
         self.l1 = nn.Linear(self.gen_num * self.embedding_dim + 256, 256)
 
@@ -23,9 +25,13 @@ class GridModel(parl.Model):
     def _get_core(self, obs):
         core = []
 
+        # (B, N, input_dim)
         gen = obs[:,:self.gen_num * self.gen_input_dim].view(-1, self.gen_num, self.gen_input_dim)
-        gen_embedding = self.gen_projection_layer(gen).view(-1, self.gen_num * self.embedding_dim)
-        core.append(gen_embedding)
+        # (B, N)
+        self.gen_status = obs[:,:self.gen_num]
+        # (B, N, E)
+        self.gen_embedding = self.gen_projection_layer(gen)
+        core.append(self.gen_embedding.view(-1, self.gen_num * self.embedding_dim))
 
         others = obs[:,self.gen_num * self.gen_input_dim:]
         others_embedding = self.others_projection_layer(others)
@@ -38,6 +44,7 @@ class GridModel(parl.Model):
 
     def policy(self, obs):
         core = self._get_core(obs)
+        
         return self.actor_head(core)
 
     def value(self, obs, action):

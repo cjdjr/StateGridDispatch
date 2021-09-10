@@ -123,7 +123,7 @@ class ObsTransformerWrapper(Wrapper):
         gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float).tolist()
         steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
-        gen_features = np.concatenate([prods, action_space_low, action_space_high, steps_to_recover_gen, gen_status])
+        gen_features = np.concatenate([gen_status, prods, action_space_low, action_space_high, steps_to_recover_gen])
         gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*self.settings.num_gen)
         
         features = np.concatenate([
