@@ -1,17 +1,15 @@
+import os
 from Observation.observation import Observation
 from Reward.rewards import *
 from utilize.read_forecast_value import ForecastReader
 from utilize.line_cutting import Disconnect
 from utilize.action_space import ActionSpace
 from utilize.legal_action import *
-from gym import spaces
-
 import example
 import copy
 import numpy as np
-
-import os
-
+import warnings
+warnings.filterwarnings('ignore')
 
 class Environment:
     def __init__(self, settings, reward_type="EPRIReward"):
@@ -62,12 +60,10 @@ class Environment:
                       settings.gen_q_filepath)
 
         injection_gen_p = self._round_p(grid.itime_unp[0])
-
         workdir = os.getcwd()
         os.chdir(os.path.dirname(os.path.abspath(__file__))+"/../")
         grid.env_feedback(settings.name_index, injection_gen_p, [], row_idx, [])
         os.chdir(workdir)
-
         rounded_gen_p = self._round_p(grid.prod_p[0])
 
         self._update_gen_status(injection_gen_p)
@@ -93,7 +89,7 @@ class Environment:
             curstep_renewable_gen_p_max=curstep_renewable_gen_p_max,
             nextstep_renewable_gen_p_max=nextstep_renewable_gen_p_max,
             rounded_gen_p=rounded_gen_p,
-            nextstep_load_p = nextstep_load_p
+            nextstep_load_p=nextstep_load_p
         )
         return copy.deepcopy(self.obs)
 
