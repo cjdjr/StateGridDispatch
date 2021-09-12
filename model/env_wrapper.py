@@ -189,6 +189,14 @@ class ActionMappingWrapper(Wrapper):
         """
         N = len(model_output_act)
 
+        # model_output_act, mask = model_output_act[:N//2], model_output_act[N//2:]
+        # gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
+        # idx = ((mask <=0 ) & (gen_status == 1))
+        # model_output_act[np.where(idx==1)] = -1
+        gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
+        idx = ((model_output_act <=0 ) & (gen_status == 1))
+        model_output_act[np.where(idx==1)] = -1
+
         gen_p_action_space = self.env.raw_obs.action_space['adjust_gen_p']
 
         gen_p_low_bound = gen_p_action_space.low
