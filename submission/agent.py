@@ -14,7 +14,7 @@ def wrap_action(adjust_gen_p):
     }
     return act
 
-OBS_DIM = 819 + 54
+OBS_DIM = 927
 ACT_DIM = 54
 
 
@@ -23,7 +23,7 @@ class Agent(object):
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/checkpoint-3300228.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/checkpoint-2650237.tar")
 
         model = GridModel(OBS_DIM, ACT_DIM)
         
@@ -66,16 +66,25 @@ class Agent(object):
         # action_space
         action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
         action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
+        for id in self.settings.renewable_ids:
+            action_space_low[id] = action_space_high[id]
         action_space_low[self.settings.balanced_id] = 0.0
         action_space_high[self.settings.balanced_id] = 0.0
         
+        # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
         steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
-        gen_status = obs.gen_status.tolist()
+        # gen_status = obs.gen_status.tolist()
+        # 1 stands for can be opened
+        gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float).tolist()
+        steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
+        gen_features = np.concatenate([gen_status, prods, action_space_low, action_space_high, steps_to_recover_gen])
+        gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*self.settings.num_gen)
+        
         features = np.concatenate([
-            loads, prods,
-            rho.tolist(), next_load, action_space_low, action_space_high,
-            steps_to_recover_gen,
+            gen_features.tolist(),
+            loads,
+            rho.tolist(), next_load
             # gen_status
         ])
 
@@ -83,6 +92,9 @@ class Agent(object):
     
     def _process_action(self, obs, action):
         N = len(action)
+        gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float)
+        idx = ((action <=0 ) & (gen_status == 1))
+        action[np.where(idx==1)] = -1
 
         gen_p_action_space = obs.action_space['adjust_gen_p']
 
