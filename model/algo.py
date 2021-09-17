@@ -73,8 +73,6 @@ class SAC(parl.Algorithm):
         # Enforcing Action Bound
         log_prob -= torch.log((1 - action.pow(2)) * 1.5 + 1e-6)
         log_prob = log_prob.sum(1, keepdims=True)
-        if torch.isnan(action).any():
-            print("error")
         return action * 1.5, log_prob
 
     def learn(self, obs, action, reward, next_obs, terminal):
