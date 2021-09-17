@@ -2,7 +2,7 @@ wandb: true
 project: griddispatch_challenge
 entity: chelly
 group: group1
-run_name: Attention-action_mask-${now:%Y%m%dT%H%M%S}
+run_name: Attention-action_clip_1.5-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
 gen_num:      54

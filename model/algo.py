@@ -59,7 +59,7 @@ class SAC(parl.Algorithm):
 
     def predict(self, obs):
         act_mean, _ = self.model.policy(obs)
-        action = torch.tanh(act_mean)
+        action = 1.5 * torch.tanh(act_mean)
         return action
 
     def sample(self, obs):
@@ -71,9 +71,11 @@ class SAC(parl.Algorithm):
 
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
-        log_prob -= torch.log((1 - action.pow(2)) + 1e-6)
+        log_prob -= torch.log((1 - action.pow(2)) * 1.5 + 1e-6)
         log_prob = log_prob.sum(1, keepdims=True)
-        return action, log_prob
+        if torch.isnan(action).any():
+            print("error")
+        return action * 1.5, log_prob
 
     def learn(self, obs, action, reward, next_obs, terminal):
         critic_loss = self._critic_learn(obs, action, reward, next_obs,
