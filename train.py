@@ -21,10 +21,13 @@ from gridsim_master_0811.Environment.base_env import Environment
 from gridsim_master_0811.utilize.settings import settings
 
 from model.grid_agent import SAC_GridAgent
-from model.grid_model import GridModel
+from model.grid_model import GridModel, HybridGridModel
 from model.env_wrapper import wrap_env
-from model.algo import SAC
+from model.algo import SAC, Hybrid_SAC
 # from gridsim_master_0811.env_wrapper import get_env
+
+from utils import get_random_hybrid_action
+
 def get_common_flags(flags):
     flags = OmegaConf.to_container(flags)
     flags["SAVE_DIR"] = os.getcwd()
@@ -50,20 +53,33 @@ class Actor(object):
         self.action_dim = action_dim
         self.flags = flags
         # Initialize model, algorithm, agent, replay_memory
-        
-        model = GridModel(obs_dim, action_dim, flags)
+
+        device = flags.ACTOR_DEVICE
+        if flags.hybrid:
+            model = HybridGridModel(obs_dim, action_dim, flags.gen_num + 1, flags)
+            algorithm = Hybrid_SAC(
+                model,
+                gamma=flags.GAMMA,
+                tau=flags.TAU,
+                alpha=flags.ALPHA,
+                alpha_d = flags.ALPHA_D,
+                actor_lr=flags.ACTOR_LR,
+                critic_lr=flags.CRITIC_LR,
+                device=device)
+        else:
+            model = GridModel(obs_dim, action_dim, flags)
+            algorithm = SAC(
+                model,
+                gamma=flags.GAMMA,
+                tau=flags.TAU,
+                alpha=flags.ALPHA,
+                actor_lr=flags.ACTOR_LR,
+                critic_lr=flags.CRITIC_LR,
+                device=device)
         # print(model.get_actor_params())
         # print(model.get_critic_params())
-        device = flags.ACTOR_DEVICE
         # device="cuda" if torch.cuda.is_available() else "cpu")
-        algorithm = SAC(
-            model,
-            gamma=flags.GAMMA,
-            tau=flags.TAU,
-            alpha=flags.ALPHA,
-            actor_lr=flags.ACTOR_LR,
-            critic_lr=flags.CRITIC_LR,
-            device=device)
+
 
         self.agent = SAC_GridAgent(algorithm, device=device)
         self.do_nothing_action = np.zeros(flags.ACT_DIM) # The adjustments of power generators are zeros.
@@ -83,7 +99,10 @@ class Actor(object):
         while not done:
             # Select action randomly or according to policy
             if random_action:
-                action = np.random.uniform(-1, 1, size=self.action_dim)
+                if self.flags.hybrid:
+                    action = get_random_hybrid_action(obs, self.flags.gen_num, self.action_dim)
+                else:
+                    action = np.random.uniform(-1, 1, size=self.action_dim)
             else:
                 action = self.agent.sample(obs)
 
@@ -163,19 +182,33 @@ class Learner(object):
         action_dim = self.flags.ACT_DIM
 
         # Initialize model, algorithm, agent, replay_memory
-        model = GridModel(obs_dim, action_dim, flags)
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        algorithm = SAC(
-            model,
-            gamma=flags.GAMMA,
-            tau=flags.TAU,
-            alpha=flags.ALPHA,
-            actor_lr=flags.ACTOR_LR,
-            critic_lr=flags.CRITIC_LR,
-            device=device)
+
+        if flags.hybrid:
+            model = HybridGridModel(obs_dim, action_dim, flags.gen_num + 1, flags)
+            algorithm = Hybrid_SAC(
+                model,
+                gamma=flags.GAMMA,
+                tau=flags.TAU,
+                alpha=flags.ALPHA,
+                alpha_d = flags.ALPHA_D,
+                actor_lr=flags.ACTOR_LR,
+                critic_lr=flags.CRITIC_LR,
+                device=device)
+        else:
+            model = GridModel(obs_dim, action_dim, flags)
+            algorithm = SAC(
+                model,
+                gamma=flags.GAMMA,
+                tau=flags.TAU,
+                alpha=flags.ALPHA,
+                actor_lr=flags.ACTOR_LR,
+                critic_lr=flags.CRITIC_LR,
+                device=device)
+                
         self.agent = SAC_GridAgent(algorithm, device=device)
         self.rpm = ReplayMemory(
-            max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim)
+            max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim + (1 if flags.hybrid else 0))
 
         self.total_steps = 0          # 环境交互的所有步数
         self.total_MDP_steps = 0      # 强化模型决策的所有步数

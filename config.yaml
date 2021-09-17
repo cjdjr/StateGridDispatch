@@ -2,8 +2,10 @@ wandb: true
 project: griddispatch_challenge
 entity: chelly
 group: group1
-run_name: Attention-action_clip_1.5-${now:%Y%m%dT%H%M%S}
+run_name: hybrid_SAC-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
+
+hybrid: true
 
 gen_num:      54
 gen_input_dim:  7
@@ -14,12 +16,14 @@ BATCH_SIZE:   256           # 训练一个BATCH的样本数
 GAMMA:        0.99          # 衰减系数
 TAU:          0.005         # SAC算法超参（Target网络更新的衰减系数）
 ALPHA:        0.2           # SAC算法超参（平衡entroy和奖励的重要性）
+ALPHA_D:      0.2
+tanh_clipping: 10
 
 ACTOR_LR:     3e-4               # Actor网络的学习率 
 CRITIC_LR:    3e-4              # Critic网络的学习率 
 OBS_DIM:      927                 # 819 873 927
 ACT_DIM:      54                  # 动作维度
-ACTOR_NUM:    16                # 并行采样的actor数量
+ACTOR_NUM:    24                # 并行采样的actor数量
 ACTOR_DEVICE: 'cpu'
 # clamp bounds for Std of action_log
 LOG_SIG_MAX:  2.0

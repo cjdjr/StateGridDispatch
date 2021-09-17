@@ -20,7 +20,7 @@ class SAC_GridAgent(parl.Agent):
 
     def sample(self, obs):
         obs = torch.FloatTensor(obs.reshape(1, -1)).to(self.device)
-        action, _ = self.alg.sample(obs)
+        action, *_ = self.alg.sample(obs)
         action_numpy = action.cpu().detach().numpy().flatten()
         return action_numpy
 

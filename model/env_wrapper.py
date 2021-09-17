@@ -149,6 +149,35 @@ class ActionMappingWrapper(Wrapper):
         # return self.env.step(wrap_action(mapped_action),**kwargs)
         return self.env.step(action,**kwargs)
 
+class HybridActionMappingWrapper(Wrapper):
+    def __init__(self, env, settings):
+        """Map action space [-1, 1] of model output to new action space
+        [low_bound, high_bound].
+        """
+        super(HybridActionMappingWrapper,self).__init__(env)
+        self.settings = settings
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+    def step(self, model_output_act, **kwargs):
+        """
+        Args:
+            model_output_act(np.array): The values must be in in [-1, 1].
+        """
+        op, model_output_act = int(model_output_act[0]), model_output_act[1:]
+        if op < self.settings.num_gen:
+            gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
+            assert gen_status[op]==1. , "op is out of range"
+            gen_status[op] = 0.
+            model_output_act = (1-gen_status) * model_output_act + gen_status * (-1)
+
+        action = action_process(self.settings, self.env.raw_obs, model_output_act)
+
+        # return self.env.step(wrap_action(mapped_action),**kwargs)
+        return self.env.step(action,**kwargs)
+
+
 class RewardWrapper(Wrapper):
 
     def __init__(self, env):
@@ -170,5 +199,6 @@ def wrap_env(env, settings):
     env = MaxTimestepWrapper(env)
     env = RewardWrapper(env)
     env = ObsTransformerWrapper(env, settings)
-    env = ActionMappingWrapper(env, settings)
+    # env = ActionMappingWrapper(env, settings)
+    env = HybridActionMappingWrapper(env, settings)
     return env

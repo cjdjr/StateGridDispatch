@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 def wrap_action(adjust_gen_p):
     act = {
@@ -42,7 +43,7 @@ def feature_process(settings, obs):
     steps_to_close_gen = obs.steps_to_close_gen.tolist()
 
     gen_features = np.concatenate([gen_status, prods, action_space_low, action_space_high, steps_to_recover_gen])
-    gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*settings.num_gen)
+    # gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*settings.num_gen)
     
     features = np.concatenate([
         gen_features.tolist(),
@@ -88,3 +89,17 @@ def action_process(settings, obs, model_output_act):
     # mapped_action[N//2 + self.settings.balanced_id] = 0.0
     mapped_action = np.clip(mapped_action, low_bound, high_bound)
     return wrap_action(mapped_action)
+
+def get_hybrid_mask(obs, num_gens = 54):
+    B = obs.shape[0]
+    mask = torch.cat([obs[:,:num_gens], torch.ones(B, 1, device = obs.device).float()], dim=1)
+    return mask
+
+def get_random_hybrid_action(obs, num_gens, action_dim):
+    gen_status = obs[:num_gens]
+    gen_status = np.append(gen_status, 1.)
+    idx = np.where(gen_status==1)[0].tolist()
+    op = idx[np.random.randint(len(idx))]
+    action = np.random.uniform(-1, 1, size=action_dim)
+    return np.insert(action,0,op)
+
