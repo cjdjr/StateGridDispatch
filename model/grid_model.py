@@ -30,15 +30,15 @@ class GridModel(parl.Model):
         # (B, N)
         self.gen_status = obs[:,:self.gen_num]
         # (B, N, E)
-        self.gen_embedding = self.gen_projection_layer(gen)
+        self.gen_embedding = F.relu(self.gen_projection_layer(gen))
         core.append(self.gen_embedding.view(-1, self.gen_num * self.embedding_dim))
 
         others = obs[:,self.gen_num * self.gen_input_dim:]
-        others_embedding = self.others_projection_layer(others)
+        others_embedding = F.relu(self.others_projection_layer(others))
         core.append(others_embedding)
 
         core = torch.cat(core, 1)
-        core = self.l1(core)
+        core = F.relu(self.l1(core))
 
         return core
 
