@@ -19,9 +19,9 @@ class Agent(object):
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/clip-checkpoint-2050215.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/hybrid_SAC_checkpoint-1900093.tar")
 
-        model = HybridGridModel(OBS_DIM, ACT_DIM)
+        model = HybridGridModel(OBS_DIM, ACT_DIM, settings.num_gen+1)
         
         #torch.save(model.state_dict(), model_path)
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
@@ -32,7 +32,6 @@ class Agent(object):
         features = self._process_obs(obs)
         # print("finish process obs")
         action = self.agent.predict(features)
-        action = 1.5 * np.tanh(action)
         # print("finish predict")
         self.action = action
         ret_action = self._process_action(obs, action)

@@ -1,6 +1,8 @@
+from utils import get_hybrid_mask
 import torch
 import numpy as np
 
+GEN_NUM = 54
 
 class GridAgent(object):
     def __init__(self, model):
@@ -27,8 +29,11 @@ class HybridGridAgent(object):
     def predict(self, obs):
         obs = torch.FloatTensor(obs.reshape(1, -1)).to(self.device)
         # print(obs.shape)
-        action, _, pi_d = self.model.policy(obs)
-        action_d = np.argmax(pi_d, dim=1, keepdim=True)
-        action = np.concatenate([action_d, action], 1)
+        mask = get_hybrid_mask(obs)
+
+        action, _, pi_d = self.model.policy(obs, mask)
+        action = torch.tanh(action)
+        action_d = torch.argmax(pi_d, dim=1, keepdim=True)
+        action = torch.cat([action_d, action], dim=1)
         action_numpy = action.cpu().detach().numpy().flatten()
         return action_numpy

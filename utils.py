@@ -57,12 +57,28 @@ def feature_process(settings, obs):
 def unwrap_hybrid_action(settings, obs, model_output_act):
     op, model_output_act = int(model_output_act[0]), model_output_act[1:]
 
+    gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float)
+
     if op < settings.num_gen:
-        gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float)
         assert gen_status[op]==1. , "op is out of range"
         gen_status[op] = 0.
-        model_output_act = (1-gen_status) * model_output_act + gen_status * (-1)
+    
+    model_output_act = (1-gen_status) * model_output_act + gen_status * (-1)
 
+    return model_output_act
+
+def random_open_action(settings, obs, model_output_act, flag=False):
+    if not flag:
+        return model_output_act
+    gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float)
+    gen_status = np.append(gen_status, 1.)
+    idx = np.where(gen_status==1)[0].tolist()
+    op = idx[np.random.randint(len(idx))]
+    if op < settings.num_gen:
+        assert gen_status[op]==1. , "op is out of range"
+        gen_status[op] = 0.
+    gen_status = gen_status[:-1]
+    model_output_act = (1-gen_status) * model_output_act + gen_status * (-1)
     return model_output_act
 
 def action_process(settings, obs, model_output_act):
@@ -70,6 +86,9 @@ def action_process(settings, obs, model_output_act):
     assert N==settings.num_gen+1 or N==settings.num_gen, "The dim of model_output_act is error !!!"
     if N==settings.num_gen+1:
         model_output_act = unwrap_hybrid_action(settings, obs, model_output_act)
+    # Rule : random open ones at every timestep
+    if N==settings.num_gen:
+        model_output_act = random_open_action(settings, obs, model_output_act, True)
     # model_output_act, mask = model_output_act[:N//2], model_output_act[N//2:]
     # gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
     # idx = ((mask <=0 ) & (gen_status == 1))
