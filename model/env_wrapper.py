@@ -165,13 +165,11 @@ class HybridActionMappingWrapper(Wrapper):
         Args:
             model_output_act(np.array): The values must be in in [-1, 1].
         """
-        op, model_output_act = int(model_output_act[0]), model_output_act[1:]
-        if op < self.settings.num_gen:
-            gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
-            assert gen_status[op]==1. , "op is out of range"
-            gen_status[op] = 0.
-            model_output_act = (1-gen_status) * model_output_act + gen_status * (-1)
 
+        # gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
+        # gen_status = np.append(gen_status, 1.)
+        # idx = np.where(gen_status==1)[0].tolist()
+        # op = idx[np.random.randint(len(idx))]
         action = action_process(self.settings, self.env.raw_obs, model_output_act)
 
         # return self.env.step(wrap_action(mapped_action),**kwargs)

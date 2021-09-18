@@ -4,8 +4,8 @@ import os
 # sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../")
 import torch
 import numpy as np
-from submission.grid_model import GridModel
-from submission.grid_agent import GridAgent
+from submission.grid_model import HybridGridModel
+from submission.grid_agent import HybridGridAgent
 
 # from submission.utils import feature_process, action_process
 from utils import feature_process, action_process
@@ -21,12 +21,12 @@ class Agent(object):
         
         model_path = os.path.join(this_directory_path, "saved_model/clip-checkpoint-2050215.tar")
 
-        model = GridModel(OBS_DIM, ACT_DIM)
+        model = HybridGridModel(OBS_DIM, ACT_DIM)
         
         #torch.save(model.state_dict(), model_path)
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
-        self.agent = GridAgent(model)
+        self.agent = HybridGridAgent(model)
         
     def act(self, obs, reward, done=False):
         features = self._process_obs(obs)
