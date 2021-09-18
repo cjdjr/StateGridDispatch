@@ -33,6 +33,6 @@ class SAC_GridAgent(parl.Agent):
         reward = torch.FloatTensor(reward).to(self.device)
         next_obs = torch.FloatTensor(next_obs).to(self.device)
         terminal = torch.FloatTensor(terminal).to(self.device)
-        critic_loss, actor_loss = self.alg.learn(obs, action, reward, next_obs,
+        critic_loss, actor_loss, *alpha_loss = self.alg.learn(obs, action, reward, next_obs,
                                                  terminal)
-        return critic_loss, actor_loss
+        return (critic_loss, actor_loss, *alpha_loss)

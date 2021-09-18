@@ -61,6 +61,7 @@ class Actor(object):
                 model,
                 gamma=flags.GAMMA,
                 tau=flags.TAU,
+                autotune=flags.autotune,
                 alpha=flags.ALPHA,
                 alpha_d = flags.ALPHA_D,
                 actor_lr=flags.ACTOR_LR,
@@ -190,6 +191,7 @@ class Learner(object):
                 model,
                 gamma=flags.GAMMA,
                 tau=flags.TAU,
+                autotune=flags.autotune,
                 alpha=flags.ALPHA,
                 alpha_d = flags.ALPHA_D,
                 actor_lr=flags.ACTOR_LR,
@@ -261,11 +263,18 @@ class Learner(object):
                         batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = self.rpm.sample_batch(
                             self.flags.BATCH_SIZE)
                     with self.model_lock:
-                        critic_loss, actor_loss = self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
+                        critic_loss, actor_loss, *alpha_loss = self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
                         if self.flags.wandb:
                             loss = {}
                             loss['critic_loss'] = critic_loss.item()
                             loss['actor_loss'] = actor_loss.item()
+                            if len(alpha_loss)>0:
+                                assert len(alpha_loss) == 4, "The length of alpha_loss is error!!!!"
+                                loss['alpha_loss'] = alpha_loss[0].item()
+                                loss['alpha_d_loss'] = alpha_loss[1].item()
+                                loss['alpha'] = alpha_loss[2]
+                                loss['alpha_d'] = alpha_loss[3]
+
                             wandb.log(loss, step=self.total_steps)
 
             learn_time = time.time() - start
@@ -324,6 +333,13 @@ def main(flags: DictConfig):
     OmegaConf.save(flags, "config.yaml")
     flags = get_common_flags(flags)
     flags = get_learner_flags(flags)
+
+    if flags.autotune:
+        # target_entropy = -float(out_c)
+        flags.ALPHA = -float(flags.ACT_DIM)
+        # target_entropy_d = -0.98 * np.log(1/out_d)
+        flags.ALPHA_D = -float(0.98 * np.log(1/(flags.gen_num+1)))
+
     if flags.wandb:
         wandb.init(
             name=flags.run_name or flags.default_run_name,

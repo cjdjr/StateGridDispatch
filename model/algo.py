@@ -125,6 +125,7 @@ class Hybrid_SAC(parl.Algorithm):
                  model,
                  gamma=None,
                  tau=None,
+                 autotune=None,
                  alpha=None,
                  alpha_d=None,
                  actor_lr=None,
@@ -147,6 +148,7 @@ class Hybrid_SAC(parl.Algorithm):
 
         self.gamma = gamma
         self.tau = tau
+        self.autotune = autotune
         self.alpha = alpha
         self.alpha_d = alpha_d
         self.actor_lr = actor_lr
@@ -154,6 +156,19 @@ class Hybrid_SAC(parl.Algorithm):
         device = torch.device(device)
         self.model = model.to(device)
         self.target_model = deepcopy(self.model)
+        if self.autotune:
+            # target_entropy = -float(out_c)
+            self.target_entropy = alpha
+            self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+            self.alpha = self.log_alpha.exp().detach().cpu().item()
+            self.a_optimizer = torch.optim.Adam([self.log_alpha], lr=1e-4)
+
+            # target_entropy_d = -0.98 * np.log(1/out_d)
+            self.target_entropy_d = alpha_d
+            self.log_alpha_d = torch.zeros(1, requires_grad=True, device=device)
+            self.alpha_d = self.log_alpha_d.exp().detach().cpu().item()
+            self.a_d_optimizer = torch.optim.Adam([self.log_alpha_d], lr=1e-4)
+
         self.actor_optimizer = torch.optim.Adam(
             self.model.get_actor_params(), lr=actor_lr)
         self.critic_optimizer = torch.optim.Adam(
@@ -194,8 +209,14 @@ class Hybrid_SAC(parl.Algorithm):
                                          terminal)
         actor_loss = self._actor_learn(obs)
 
+        if self.autotune:
+            alpha_loss, alpha_d_loss = self._alpha_learn(obs)
+
         self.sync_target()
-        return critic_loss, actor_loss
+        if self.autotune:
+            return critic_loss, actor_loss, alpha_loss, alpha_d_loss, self.alpha, self.alpha_d
+        else:
+            return critic_loss, actor_loss
 
     def _critic_learn(self, obs, action, reward, next_obs, terminal):
         with torch.no_grad():
@@ -232,6 +253,25 @@ class Hybrid_SAC(parl.Algorithm):
         actor_loss.backward()
         self.actor_optimizer.step()
         return actor_loss
+
+    def _alpha_learn(self, obs):
+        with torch.no_grad():
+            action, log_prob_d, log_prob_c, prob_d = self.sample(obs)
+        alpha_loss = (-self.log_alpha * prob_d * (prob_d * log_prob_c + self.target_entropy)).sum(1).mean()
+        alpha_d_loss = (-self.log_alpha_d * prob_d * (log_prob_d + self.target_entropy_d)).sum(1).mean()
+
+        self.a_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.a_optimizer.step()
+        self.alpha = self.log_alpha.exp().detach().cpu().item()
+
+        self.a_d_optimizer.zero_grad()
+        alpha_d_loss.backward()
+        self.a_d_optimizer.step()
+        self.alpha_d = self.log_alpha_d.exp().detach().cpu().item()
+
+        return alpha_loss, alpha_d_loss
+
 
     def sync_target(self, decay=None):
         if decay is None:
