@@ -10,13 +10,20 @@ class dotdict(dict):
             return self[name]
         except KeyError:
             raise AttributeError(name)
+import os
+root = os.path.dirname(os.path.abspath(__file__))+"/../"
 
-with open('utilize/parameters/main.yml', 'r') as f:
+with open(root+'utilize/parameters/main.yml', 'r') as f:
     dict_ = yaml.load(f, Loader=yaml.Loader)
     name_index = {}
     for key, val in zip(dict_["un_nameindex_key"], dict_["un_nameindex_value"]):
         name_index[key] = val
     dict_['name_index'] = name_index
+
+    for key in dict_.keys():
+        if key.endswith("filepath"):
+            dict_[key] = root + dict_[key]
+
 
 settings = dotdict(dict_)
 del dict_
