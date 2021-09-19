@@ -268,7 +268,8 @@ class Hybrid_SAC(parl.Algorithm):
         self.a_d_optimizer.zero_grad()
         alpha_d_loss.backward()
         self.a_d_optimizer.step()
-        self.alpha_d = self.log_alpha_d.exp().detach().cpu().item()
+
+        self.alpha_d = torch.clamp(self.log_alpha_d, max=8.5).exp().detach().cpu().item()
 
         return alpha_loss, alpha_d_loss
 

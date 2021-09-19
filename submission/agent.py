@@ -19,7 +19,7 @@ class Agent(object):
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/hybrid_SAC_checkpoint-1900093.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/hybrid_SAC-checkpoint-2500206.tar")
 
         model = HybridGridModel(OBS_DIM, ACT_DIM, settings.num_gen+1)
         

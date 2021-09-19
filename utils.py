@@ -87,8 +87,8 @@ def action_process(settings, obs, model_output_act):
     if N==settings.num_gen+1:
         model_output_act = unwrap_hybrid_action(settings, obs, model_output_act)
     # Rule : random open ones at every timestep
-    if N==settings.num_gen:
-        model_output_act = random_open_action(settings, obs, model_output_act, True)
+    # if N==settings.num_gen:
+    #     model_output_act = random_open_action(settings, obs, model_output_act, True)
     # model_output_act, mask = model_output_act[:N//2], model_output_act[N//2:]
     # gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
     # idx = ((mask <=0 ) & (gen_status == 1))
