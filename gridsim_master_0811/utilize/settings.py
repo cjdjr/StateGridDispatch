@@ -24,6 +24,7 @@ with open(root+'utilize/parameters/main.yml', 'r') as f:
         if key.endswith("filepath"):
             dict_[key] = root + dict_[key]
 
+
 settings = dotdict(dict_)
 del dict_
 
