@@ -12,3 +12,5 @@ paddle_torch_tf*
 submission/saved_model
 submission/utils.py
 test_result.txt
+submission_test/
+figure/

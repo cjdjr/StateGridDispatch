@@ -1,4 +1,4 @@
-from utils import get_hybrid_mask
+from submission.utils import get_hybrid_mask
 import torch
 import numpy as np
 
@@ -14,7 +14,7 @@ class GridAgent(object):
     def predict(self, obs):
         obs = torch.FloatTensor(obs.reshape(1, -1)).to(self.device)
         # print(obs.shape)
-        action = self.model.policy(obs)[0]
+        action = torch.tanh(self.model.policy(obs)[0])
         # print("ok")
         action_numpy = action.cpu().detach().numpy().flatten()
         return action_numpy

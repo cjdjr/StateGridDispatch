@@ -112,9 +112,51 @@ import numpy as np
 from gridsim_master_0811.Environment.base_env import Environment
 from gridsim_master_0811.utilize.settings import settings
 
+class Data(object):
+    def __init__(self, name="") -> None:
+        super().__init__()
+        self.name = name
+        self.init()
+
+    def init(self):
+        self.gen_p = []
+        self.closed_gen = []
+        self.rho = []
+        self.next_load_p = []
+
+    def add_data(self, obs, act):
+        self.gen_p.append(obs.gen_p[17])
+        self.closed_gen.append(54-sum(obs.gen_status))
+        self.rho.append(max(obs.rho))
+        self.next_load_p.append(sum(obs.nextstep_load_p))
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+        plt.clf()
+        plt.plot(self.gen_p)
+        plt.ylabel('gen_p[17]')
+        plt.savefig('figure/{}_gen_p.png'.format(self.name))
+
+        plt.clf()
+        plt.plot(self.closed_gen)
+        plt.ylabel('closed_gen')
+        plt.savefig('figure/{}_closed_gen.png'.format(self.name))
+
+        plt.clf()
+        plt.plot(self.rho)
+        plt.ylabel('rho')
+        plt.savefig('figure/{}_rho.png'.format(self.name))
+
+        plt.clf()
+        plt.plot(self.next_load_p)
+        plt.ylabel('next_load_p')
+        plt.savefig('figure/{}_next_load_p.png'.format(self.name))
+
+
 steps = []
 infos = []
 def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout):
+
     print("start_idx: ", start_idx)
     obs = env.reset(seed=seed, start_sample_idx=start_idx)
 
@@ -126,6 +168,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     act_timeout_context = TimeoutContext(act_timeout)
     last_obs = None
     last_action = None
+    data = Data("hybrid_SAC_2500206")
     for step in range(episode_max_steps):
         try:
             with act_timeout_context:
@@ -144,6 +187,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
 
         #     action['adjust_gen_p'] = np.clip(action['adjust_gen_p'], low_bound, high_bound)
         #     pass
+        data.add_data(obs, action)
         try:
             obs, reward, done, info = env.step(action)
             last_obs = obs
@@ -161,6 +205,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     print("info: ",info)
     steps.append(sum_steps)
     infos.append(info)
+    data.plot()
     return sum_reward
 
 
@@ -177,6 +222,7 @@ def eval(submit_file=None):
     
     try:
         from submission.agent import Agent
+        # from submission_test.agent import Agent
     except Exception as e:
         raise AgentClassCannotImportException(str(e))
     
@@ -186,6 +232,7 @@ def eval(submit_file=None):
         with run_timeout_context:
             try:
                 agent = Agent(copy.deepcopy(settings), "submission/")
+                # agent = Agent(copy.deepcopy(settings), "submission_test/")
             except Exception as e:
                 if isinstance(e, TimeoutException):
                     raise TimeoutException()
@@ -199,7 +246,7 @@ def eval(submit_file=None):
             np.random.seed(1234)
             idx = np.random.randint(settings.num_sample, size=20)
             # 1 -> step = 40
-            for start_idx in idx:
+            for start_idx in idx[12:13]:
                 # start_idx = 4654
                 score = run_one_episode(env, SEED, start_idx, episode_max_steps, agent, ACT_TIMEOUT)
                 scores.append(score)
@@ -213,6 +260,8 @@ def eval(submit_file=None):
 
     mean_score = np.mean(scores)
     print("steps :   ",steps)
+    scores = [format(x,'.2f') for x in map(float,scores)]
+    scores = " | ".join(scores)
     print("scores :   ",scores)
     print("infos :    ",infos)
     return {'score': mean_score}
