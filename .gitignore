@@ -11,3 +11,5 @@ playground.py
 paddle_torch_tf*
 submission/saved_model
 test_result.txt
+submission_test/
+figure/
