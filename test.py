@@ -199,7 +199,7 @@ def eval(submit_file=None):
             np.random.seed(1234)
             idx = np.random.randint(settings.num_sample, size=20)
             # 1 -> step = 40
-            for start_idx in idx[12:13]:
+            for start_idx in idx:
                 # start_idx = 4654
                 score = run_one_episode(env, SEED, start_idx, episode_max_steps, agent, ACT_TIMEOUT)
                 scores.append(score)

@@ -29,7 +29,7 @@ class GridModel(nn.Module):
         core = []
 
         # (B, N, input_dim)
-        gen = obs[:,:self.gen_num * self.gen_input_dim].view(-1, self.gen_num, self.gen_input_dim)
+        gen = obs[:,:self.gen_num * self.gen_input_dim].view(-1, self.gen_input_dim, self.gen_num).transpose(1,2)
         # (B, N)
         self.gen_status = obs[:,:self.gen_num]
         # (B, N, E)
