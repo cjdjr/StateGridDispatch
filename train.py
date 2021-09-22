@@ -33,6 +33,7 @@ def get_common_flags(flags):
 def get_learner_flags(flags):
     lrn_flags = OmegaConf.to_container(flags)
     lrn_flags["checkpoint"] = os.path.join(flags["SAVE_DIR"], "checkpoint.tar")
+    lrn_flags["obs_statistics"] = os.path.join(flags["SAVE_DIR"], "obs_statistics.npy")
     return OmegaConf.create(lrn_flags)
 
 def get_env():
@@ -192,13 +193,19 @@ class Learner(object):
             th.setDaemon(True)
             th.start()
 
-    def checkpoint(self, checkpoint_path=None):
+    def checkpoint(self, checkpoint_path=None, obs_statistics_path=None):
         if self.flags.checkpoint:
             if checkpoint_path is None:
                 checkpoint_path = self.flags.checkpoint
+                obs_statistics_path = self.flags.obs_statistics
             logging.info("Saving checkpoint to %s", checkpoint_path)
             torch.save(self.agent.alg.model.state_dict(),checkpoint_path)
 
+            with self.rpm_lock:
+                mean = self.rpm.obs.mean(axis=0)
+                std = self.rpm.obs.std(axis=0)
+            np.save(obs_statistics_path,(mean,std))
+            
     def run_sampling(self):
         actor = Actor(self.flags)
         while True:

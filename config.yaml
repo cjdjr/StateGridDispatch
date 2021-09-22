@@ -5,7 +5,7 @@ group: group1
 run_name: Baseline-rule_random_open-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
-WARMUP_STEPS: 10          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
+WARMUP_STEPS: 10000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
 MEMORY_SIZE:  1000000       # 经验池大小
 BATCH_SIZE:   256           # 训练一个BATCH的样本数
 GAMMA:        0.99          # 衰减系数
