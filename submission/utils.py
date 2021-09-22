@@ -8,6 +8,7 @@ def wrap_action(adjust_gen_p):
     return act
 
 def feature_process(settings, obs):
+
     loads = []
     loads.append(obs.load_p)
     loads.append(obs.load_q)
@@ -29,25 +30,16 @@ def feature_process(settings, obs):
     # action_space
     action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
     action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
-    for id in settings.renewable_ids:
-        action_space_low[id] = action_space_high[id]
     action_space_low[settings.balanced_id] = 0.0
     action_space_high[settings.balanced_id] = 0.0
     
-    # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
     steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
-    # gen_status = obs.gen_status.tolist()
-    # 1 stands for can be opened
-    gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float).tolist()
-    steps_to_close_gen = obs.steps_to_close_gen.tolist()
+    gen_status = obs.gen_status.tolist()
 
-    gen_features = np.concatenate([gen_status, prods, action_space_low, action_space_high, steps_to_recover_gen])
-    # gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*settings.num_gen)
-    
     features = np.concatenate([
-        gen_features.tolist(),
-        loads,
-        rho.tolist(), next_load
+        loads, prods,
+        rho.tolist(), next_load, action_space_low, action_space_high,
+        steps_to_recover_gen,
         # gen_status
     ])
 

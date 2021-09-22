@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 from parl.utils import logger
-from wandb import Settings
+from utils import feature_process, action_process
 
 class Wrapper(gym.Env):
     """Wraps the environment to allow a modular transformation.
@@ -91,52 +91,7 @@ class ObsTransformerWrapper(Wrapper):
 
     def _get_obs(self, obs):
 
-        loads = []
-        loads.append(obs.load_p)
-        loads.append(obs.load_q)
-        loads.append(obs.load_v)
-        loads = np.concatenate(loads)
-
-        # prods
-        prods = []
-        prods.append(obs.gen_p)
-        prods.append(obs.gen_q)
-        prods.append(obs.gen_v)
-        prods = np.concatenate(prods)
-        
-        # rho
-        rho = np.array(obs.rho) - 1.0
-
-        next_load = obs.nextstep_load_p
-
-        balanced_id = self.settings.balanced_id
-        # action_space
-        action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
-        action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
-        action_space_low[balanced_id] = 0.0
-        action_space_high[balanced_id] = 0.0
-        
-        # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
-        steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
-        gen_status = obs.gen_status.tolist()
-        steps_to_close_gen = obs.steps_to_close_gen.tolist()
-
-        balance_gen_p_limit = [
-            self.settings['max_gen_p'][balanced_id] - obs.gen_p[balanced_id], 
-            obs.gen_p[balanced_id] - self.settings['min_gen_p'][balanced_id]
-            ]
-
-
-        features = np.concatenate([
-            loads, prods,
-            rho.tolist(), next_load, 
-            action_space_low, action_space_high,
-            steps_to_recover_gen,
-            balance_gen_p_limit,
-            # gen_status
-        ])
-
-        return features
+        return feature_process(self.settings, obs)
 
     def step(self, action, **kwargs):
         self.raw_obs, reward, done, info = self.env.step(action, **kwargs)
@@ -180,7 +135,6 @@ class ActionMappingWrapper(Wrapper):
         """
         super(ActionMappingWrapper,self).__init__(env)
         self.settings = settings
-        self.v_action = np.zeros(self.settings.num_gen)
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -190,34 +144,37 @@ class ActionMappingWrapper(Wrapper):
         Args:
             model_output_act(np.array): The values must be in in [-1, 1].
         """
-        N = len(model_output_act)
-
-        gen_p_action_space = self.env.raw_obs.action_space['adjust_gen_p']
-
-        gen_p_low_bound = gen_p_action_space.low
-        gen_p_high_bound = gen_p_action_space.high
-
-        # gen_v_action_space = self.env.raw_obs.action_space['adjust_gen_v']
-
-        # gen_v_low_bound = gen_v_action_space.low
-        # gen_v_high_bound = gen_v_action_space.high
-
-        # low_bound = np.concatenate([gen_p_low_bound, gen_v_low_bound])
-        # high_bound = np.concatenate([gen_p_high_bound, gen_v_high_bound])
-        low_bound = gen_p_low_bound
-        high_bound = gen_p_high_bound
-
-        for id in self.settings.renewable_ids:
-            low_bound[id] = high_bound[id]
-            
-        mapped_action = low_bound + (model_output_act - (-1.0)) * (
-            (high_bound - low_bound) / 2.0)
-        mapped_action[self.settings.balanced_id] = 0.0
-        # mapped_action[N//2 + self.settings.balanced_id] = 0.0
-        mapped_action = np.clip(mapped_action, low_bound, high_bound)
+        action = action_process(self.settings, self.env.raw_obs, model_output_act)
 
         # return self.env.step(wrap_action(mapped_action),**kwargs)
-        return self.env.step(form_action(mapped_action, self.v_action),**kwargs)
+        return self.env.step(action,**kwargs)
+
+class HybridActionMappingWrapper(Wrapper):
+    def __init__(self, env, settings):
+        """Map action space [-1, 1] of model output to new action space
+        [low_bound, high_bound].
+        """
+        super(HybridActionMappingWrapper,self).__init__(env)
+        self.settings = settings
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+    def step(self, model_output_act, **kwargs):
+        """
+        Args:
+            model_output_act(np.array): The values must be in in [-1, 1].
+        """
+
+        # gen_status = ((self.env.raw_obs.gen_status == 0) & (self.env.raw_obs.steps_to_recover_gen == 0)).astype(float)
+        # gen_status = np.append(gen_status, 1.)
+        # idx = np.where(gen_status==1)[0].tolist()
+        # op = idx[np.random.randint(len(idx))]
+        action = action_process(self.settings, self.env.raw_obs, model_output_act)
+
+        # return self.env.step(wrap_action(mapped_action),**kwargs)
+        return self.env.step(action,**kwargs)
+
 
 class RewardWrapper(Wrapper):
 
@@ -236,20 +193,10 @@ class RewardWrapper(Wrapper):
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
     
-def wrap_action(action):
-    N = len(action)
-    act = {
-        'adjust_gen_p': action[:N//2],
-        'adjust_gen_v': action[N//2:]
-    }
-    return act
-    
-def form_action(adjust_gen_p, adjust_gen_v):
-    return {'adjust_gen_p': adjust_gen_p, 'adjust_gen_v': adjust_gen_v}
-
 def wrap_env(env, settings):
     env = MaxTimestepWrapper(env)
     env = RewardWrapper(env)
     env = ObsTransformerWrapper(env, settings)
-    env = ActionMappingWrapper(env, settings)
+    # env = ActionMappingWrapper(env, settings)
+    env = HybridActionMappingWrapper(env, settings)
     return env
