@@ -123,12 +123,14 @@ class Data(object):
         self.closed_gen = []
         self.rho = []
         self.next_load_p = []
+        self.act_mean = []
 
     def add_data(self, obs, act):
         self.gen_p.append(obs.gen_p[17])
         self.closed_gen.append(54-sum(obs.gen_status))
         self.rho.append(max(obs.rho))
         self.next_load_p.append(sum(obs.nextstep_load_p))
+        self.act_mean.append(np.mean(act['adjust_gen_p']))
 
     def plot(self):
         import matplotlib.pyplot as plt
@@ -152,6 +154,11 @@ class Data(object):
         plt.ylabel('next_load_p')
         plt.savefig('figure/{}_next_load_p.png'.format(self.name))
 
+        plt.clf()
+        plt.plot(self.act_mean)
+        plt.ylabel('mean_action')
+        plt.savefig('figure/{}_mean_action.png'.format(self.name))
+
 
 steps = []
 infos = []
@@ -168,7 +175,8 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     act_timeout_context = TimeoutContext(act_timeout)
     last_obs = None
     last_action = None
-    data = Data("hybrid_SAC_2500206")
+    data = Data("baseline-randomopen-checkpoint-7150069")
+    # data = Data("test-1234-15")
     for step in range(episode_max_steps):
         try:
             with act_timeout_context:
@@ -246,7 +254,7 @@ def eval(submit_file=None):
             np.random.seed(1234)
             idx = np.random.randint(settings.num_sample, size=20)
             # 1 -> step = 40
-            for start_idx in idx[12:13]:
+            for start_idx in idx:
                 # start_idx = 4654
                 score = run_one_episode(env, SEED, start_idx, episode_max_steps, agent, ACT_TIMEOUT)
                 scores.append(score)
@@ -259,6 +267,9 @@ def eval(submit_file=None):
             raise e
 
     mean_score = np.mean(scores)
+    global steps
+    steps = [format(x,'.2f') for x in map(float,steps)]
+    steps = " | ".join(steps)
     print("steps :   ",steps)
     scores = [format(x,'.2f') for x in map(float,scores)]
     scores = " | ".join(scores)

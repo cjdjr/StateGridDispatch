@@ -83,15 +83,16 @@ class MaxTimestepWrapper(Wrapper):
 
 class ObsTransformerWrapper(Wrapper):
 
-    def __init__(self, env, settings):
+    def __init__(self, env, settings, obs_statistics=None):
         super(ObsTransformerWrapper,self).__init__(env)
         self.settings = settings
         self.has_overflow = False # Add an attribute to mark whether the env has overflowed lines.. 
         self.has_overbalance = False
+        self.obs_statistics = obs_statistics
 
     def _get_obs(self, obs):
 
-        return feature_process(self.settings, obs)
+        return feature_process(self.settings, obs, self.obs_statistics)
 
     def step(self, action, **kwargs):
         self.raw_obs, reward, done, info = self.env.step(action, **kwargs)
@@ -193,10 +194,10 @@ class RewardWrapper(Wrapper):
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
     
-def wrap_env(env, settings):
+def wrap_env(env, settings, obs_statistics=None):
     env = MaxTimestepWrapper(env)
     env = RewardWrapper(env)
-    env = ObsTransformerWrapper(env, settings)
+    env = ObsTransformerWrapper(env, settings, obs_statistics)
     # env = ActionMappingWrapper(env, settings)
     env = HybridActionMappingWrapper(env, settings)
     return env

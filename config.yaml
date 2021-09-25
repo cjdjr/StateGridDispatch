@@ -2,8 +2,10 @@ wandb: true
 project: griddispatch_challenge
 entity: chelly
 group: group1
-run_name: Baseline-rule_random_open-${now:%Y%m%dT%H%M%S}
+run_name: Baseline-rho_balance_reward-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
+
+whiten: false
 
 WARMUP_STEPS: 10000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
 MEMORY_SIZE:  1000000       # 经验池大小

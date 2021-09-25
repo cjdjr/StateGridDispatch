@@ -36,16 +36,25 @@ def get_learner_flags(flags):
     lrn_flags["obs_statistics"] = os.path.join(flags["SAVE_DIR"], "obs_statistics.npy")
     return OmegaConf.create(lrn_flags)
 
-def get_env():
-    env = Environment(settings, "EPRIReward")
-    env = wrap_env(env, settings)
+def get_env(flags):
+    # env = Environment(settings, "EPRIReward")
+    env = Environment(settings, "TrainReward")
+    obs_statistics = None
+    if flags.whiten:
+        path = '/data1/wangmr/StateGridDispatch'
+        mean,std = np.load(path+'/obs_statistics.npy')
+        obs_statistics={
+            'mean':mean,
+            'std':std
+        }
+    env = wrap_env(env, settings, obs_statistics)
     return env
 
 @parl.remote_class
 class Actor(object):
     def __init__(self, flags):
         # print("ok")
-        self.env =  get_env()
+        self.env =  get_env(flags)
         obs_dim = flags.OBS_DIM
         action_dim = flags.ACT_DIM
         self.action_dim = action_dim

@@ -7,7 +7,7 @@ def wrap_action(adjust_gen_p):
     }
     return act
 
-def feature_process(settings, obs):
+def feature_process(settings, obs, dict=None):
 
     loads = []
     loads.append(obs.load_p)
@@ -42,6 +42,9 @@ def feature_process(settings, obs):
         steps_to_recover_gen,
         # gen_status
     ])
+
+    if dict is not None:
+        features = (features - dict['mean']) / (dict['std'] + 1e-6)
 
     return features
 
