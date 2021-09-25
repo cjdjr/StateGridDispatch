@@ -13,17 +13,18 @@ import torch
 import threading
 import time
 import parl
-from parl.utils import ReplayMemory
+# from parl.utils import ReplayMemory
 # from parl.algorithms import SAC
 from parl.utils.window_stat import WindowStat
 
 from gridsim_master_0811.Environment.base_env import Environment
 from gridsim_master_0811.utilize.settings import settings
 
-from model.grid_agent import SAC_GridAgent
+from model.grid_agent import Ensemble_SAC_GridAgent
 from model.grid_model import GridModel
+from model.replaybuffer import EnsembleReplayMemory
 from model.env_wrapper import wrap_env
-from model.algo import SAC
+from model.algo import Ensemble_SAC
 # from gridsim_master_0811.env_wrapper import get_env
 def get_common_flags(flags):
     flags = OmegaConf.to_container(flags)
@@ -37,8 +38,8 @@ def get_learner_flags(flags):
     return OmegaConf.create(lrn_flags)
 
 def get_env(flags):
-    # env = Environment(settings, "EPRIReward")
-    env = Environment(settings, "TrainReward")
+    env = Environment(settings, "EPRIReward")
+    # env = Environment(settings, "TrainReward")
     obs_statistics = None
     if flags.whiten:
         path = '/data1/wangmr/StateGridDispatch'
@@ -60,22 +61,27 @@ class Actor(object):
         self.action_dim = action_dim
         self.flags = flags
         # Initialize model, algorithm, agent, replay_memory
-        
-        model = GridModel(obs_dim, action_dim, flags)
+        self.num_ensemble = flags.num_ensemble
+        models = []
+        for i in range(flags.num_ensemble):
+            model = GridModel(obs_dim, action_dim, flags)
+            models.append(model)
         # print(model.get_actor_params())
         # print(model.get_critic_params())
         device = flags.ACTOR_DEVICE
         # device="cuda" if torch.cuda.is_available() else "cpu")
-        algorithm = SAC(
-            model,
+        algorithm = Ensemble_SAC(
+            models,
             gamma=flags.GAMMA,
             tau=flags.TAU,
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
+            temperature=flags.temperature,
+            ber_mean=flags.ber_mean,
             device=device)
 
-        self.agent = SAC_GridAgent(algorithm, device=device)
+        self.agent = Ensemble_SAC_GridAgent(algorithm, device=device)
         self.do_nothing_action = np.zeros(flags.ACT_DIM) # The adjustments of power generators are zeros.
 
 
@@ -94,15 +100,16 @@ class Actor(object):
             # Select action randomly or according to policy
             if random_action:
                 action = np.random.uniform(-1, 1, size=self.action_dim)
+                mask = np.ones(self.num_ensemble).astype(float)
             else:
-                action = self.agent.sample(obs)
+                action, mask = self.agent.sample(obs)
 
             # Perform action
             next_obs, reward, done, info = self.env.step(action)
             terminal = done and not info['timeout']
             terminal = float(terminal)
 
-            sample_data.append((obs, action, reward, next_obs, terminal))
+            sample_data.append((obs, action, reward, next_obs, terminal, mask))
 
             obs = next_obs
             episode_training_reward += reward
@@ -171,21 +178,27 @@ class Learner(object):
         self.flags = flags
         obs_dim = self.flags.OBS_DIM
         action_dim = self.flags.ACT_DIM
+        num_ensemble = self.flags.num_ensemble
 
         # Initialize model, algorithm, agent, replay_memory
-        model = GridModel(obs_dim, action_dim, flags)
+        models = []
+        for i in range(num_ensemble):
+            model = GridModel(obs_dim, action_dim, flags)
+            models.append(model)
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        algorithm = SAC(
-            model,
+        algorithm = Ensemble_SAC(
+            models,
             gamma=flags.GAMMA,
             tau=flags.TAU,
             alpha=flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
+            temperature=flags.temperature,
+            ber_mean=flags.ber_mean,
             device=device)
-        self.agent = SAC_GridAgent(algorithm, device=device)
-        self.rpm = ReplayMemory(
-            max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim)
+        self.agent = Ensemble_SAC_GridAgent(algorithm, device=device)
+        self.rpm = EnsembleReplayMemory(
+            max_size=flags.MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim, num_ensemble=num_ensemble)
 
         self.total_steps = 0          # 环境交互的所有步数
         self.total_MDP_steps = 0      # 强化模型决策的所有步数
@@ -208,7 +221,7 @@ class Learner(object):
                 checkpoint_path = self.flags.checkpoint
                 obs_statistics_path = self.flags.obs_statistics
             logging.info("Saving checkpoint to %s", checkpoint_path)
-            torch.save(self.agent.alg.model.state_dict(),checkpoint_path)
+            torch.save(self.agent.alg.get_state_dict(),checkpoint_path)
 
             with self.rpm_lock:
                 mean = self.rpm.obs.mean(axis=0)
@@ -241,10 +254,10 @@ class Learner(object):
             if self.rpm.size() >= self.flags.WARMUP_STEPS:
                 for _ in range(len(sample_data)):
                     with self.rpm_lock:
-                        batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = self.rpm.sample_batch(
+                        batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal, batch_mask = self.rpm.sample_batch(
                             self.flags.BATCH_SIZE)
                     with self.model_lock:
-                        critic_loss, actor_loss = self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
+                        critic_loss, actor_loss = self.agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal, batch_mask)
                         if self.flags.wandb:
                             loss = {}
                             loss['critic_loss'] = critic_loss.item()
