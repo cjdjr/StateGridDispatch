@@ -64,6 +64,11 @@ def EPRIReward(obs, last_obs, settings):
         settings.coeff_sub_voltage * sub_voltage_reward(obs, settings)
     return r
 
+def TrainReward(obs, last_obs, settings):
+    r = settings.coeff_line_over_flow * line_over_flow_reward(obs, settings) + \
+        settings.coeff_balanced_gen * balanced_gen_reward(obs, settings)
+    return r
+
 def AllReward(obs, last_obs, settings):
     r = {}
     r['line_over_flow_reward'] = line_over_flow_reward(obs, settings)
