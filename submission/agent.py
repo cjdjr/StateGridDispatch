@@ -16,21 +16,26 @@ def wrap_action(adjust_gen_p):
 
 OBS_DIM = 819 + 54
 ACT_DIM = 54
-
+num_ensemble = 3
 
 class Agent(object):
 
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/baseline-randomopen-checkpoint-7150069.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/ensemble_3_checkpoint_1000274.tar")
 
-        model = GridModel(OBS_DIM, ACT_DIM)
+        models = []
+        for i in range(num_ensemble):
+            models.append(GridModel(OBS_DIM, ACT_DIM))
         
         #torch.save(model.state_dict(), model_path)
-        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+        state_dict = torch.load(model_path, map_location='cpu')
+        assert len(state_dict) == num_ensemble
+        for i in range(num_ensemble):
+            models[i].load_state_dict(state_dict[i])
 
-        self.agent = GridAgent(model)
+        self.agent = GridAgent(models)
         self.obs_statistics = None
         # try:
         #     mean,std = np.load(os.path.join(this_directory_path, "saved_model/obs_statistics.npy"))
@@ -45,7 +50,6 @@ class Agent(object):
         features = self._process_obs(obs)
         # print("finish process obs")
         action = self.agent.predict(features)
-        action = np.tanh(action)
         # print("finish predict")
         self.action = action
         ret_action = self._process_action(obs, action)

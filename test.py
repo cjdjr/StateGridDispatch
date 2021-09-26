@@ -175,11 +175,11 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     act_timeout_context = TimeoutContext(act_timeout)
     last_obs = None
     last_action = None
-    data = Data("baseline-randomopen-checkpoint-7150069")
+    data = Data("ensemble_3_checkpoint_750129")
     # data = Data("test-1234-15")
     for step in range(episode_max_steps):
         try:
-            with act_timeout_context:
+            # with act_timeout_context:
                 action = agent.act(obs, reward, done)
         except Exception as e:
             if isinstance(e, TimeoutException):
