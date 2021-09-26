@@ -125,6 +125,7 @@ class Ensemble_SAC(parl.Algorithm):
                  models,
                  gamma=None,
                  tau=None,
+                 autotune=None,
                  alpha=None,
                  actor_lr=None,
                  critic_lr=None,
@@ -148,6 +149,7 @@ class Ensemble_SAC(parl.Algorithm):
 
         self.gamma = gamma
         self.tau = tau
+        self.autotune = autotune
         self.alpha = alpha
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
@@ -167,6 +169,18 @@ class Ensemble_SAC(parl.Algorithm):
             self.target_model.append(target_model)
             self.actor_optimizer.append(actor_optimizer)
             self.critic_optimizer.append(critic_optimizer)
+
+        if self.autotune:
+            self.target_entropy = self.alpha
+            self.alpha = [1.] * self.num_ensemble
+            self.alpha_optimizer, self.log_alpha = [], []
+            for i in range(self.num_ensemble):
+                log_alpha = torch.zeros(1, requires_grad=True, device=device)
+                alpha_optimizer = torch.optim.Adam([log_alpha], lr=actor_lr)
+                self.alpha_optimizer.append(alpha_optimizer)
+                self.log_alpha.append(log_alpha)
+        else:
+            self.alpha = [self.alpha] * self.num_ensemble
 
     def predict(self, obs):
         action = None
@@ -229,6 +243,9 @@ class Ensemble_SAC(parl.Algorithm):
 
 
     def learn(self, obs, action, reward, next_obs, terminal, masks):
+        if self.autotune:
+            self._alpha_learn(obs, masks)
+
         critic_loss = self._critic_learn(obs, action, reward, next_obs,
                                          terminal, masks)
         actor_loss = self._actor_learn(obs, masks)
@@ -293,6 +310,18 @@ class Ensemble_SAC(parl.Algorithm):
 
         return torch.sqrt(std_Q).detach()
 
+    def _alpha_learn(self, obs, masks):
+        with torch.no_grad():
+            actions, log_probs = self.sample(obs)
+        for i in range(self.num_ensemble):
+            mask = masks[:,i]
+            alpha_loss = -(self.log_alpha[i] * (log_probs[i] + self.target_entropy).detach()) * mask
+            alpha_loss = alpha_loss.sum() / (mask.sum() + 1)
+            self.alpha_optimizer[i].zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer[i].step()
+            self.alpha[i] = self.log_alpha[i].detach().exp().item()
+        
     def _critic_learn(self, obs, action, reward, next_obs, terminal, masks):
         critic_loss_mean = None
         Q_std = self._corrective_feedback(obs, mode=1)
@@ -304,7 +333,7 @@ class Ensemble_SAC(parl.Algorithm):
             with torch.no_grad():
                 q1_next, q2_next = self.target_model[i].critic_model(
                     next_obs, next_action[i])
-                target_Q = torch.min(q1_next, q2_next) - self.alpha * next_log_pro[i]
+                target_Q = torch.min(q1_next, q2_next) - self.alpha[i] * next_log_pro[i]
                 target_Q = reward + self.gamma * (1. - terminal) * target_Q
             mask = masks[:,i]
             cur_q1, cur_q2 = self.model[i].critic_model(obs, action)
@@ -332,7 +361,7 @@ class Ensemble_SAC(parl.Algorithm):
             q1_pi, q2_pi = self.model[i].critic_model(obs, act[i])
             min_q_pi = torch.min(q1_pi, q2_pi)
             mask = masks[:,i]
-            actor_loss = ((self.alpha * log_pi[i]) - min_q_pi) * mask
+            actor_loss = ((self.alpha[i] * log_pi[i]) - min_q_pi) * mask
             actor_loss = actor_loss.sum() / (mask.sum()+1)
             self.actor_optimizer[i].zero_grad()
             actor_loss.backward()

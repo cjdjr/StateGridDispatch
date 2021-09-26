@@ -2,10 +2,11 @@ wandb: false
 project: griddispatch_challenge
 entity: chelly
 group: group1
-run_name: Ensemble_3-test-${now:%Y%m%dT%H%M%S}
+run_name: Ensemble_3-autotune-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
 whiten: false
+autotune: true
 
 # Ensemble SAC
 num_ensemble: 3
@@ -23,7 +24,7 @@ ACTOR_LR:     3e-4               # Actor网络的学习率
 CRITIC_LR:    3e-4              # Critic网络的学习率 
 OBS_DIM:      873                 # 819 873 927
 ACT_DIM:      54                  # 动作维度
-ACTOR_NUM:    8                # 并行采样的actor数量
+ACTOR_NUM:    16                # 并行采样的actor数量
 ACTOR_DEVICE: 'cpu'
 # clamp bounds for Std of action_log
 LOG_SIG_MAX:  2.0

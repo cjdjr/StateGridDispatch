@@ -74,7 +74,8 @@ class Actor(object):
             models,
             gamma=flags.GAMMA,
             tau=flags.TAU,
-            alpha=flags.ALPHA,
+            autotune=flags.autotune,
+            alpha=float(-flags.ACT_DIM) if flags.autotune else flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
             temperature=flags.temperature,
@@ -190,7 +191,8 @@ class Learner(object):
             models,
             gamma=flags.GAMMA,
             tau=flags.TAU,
-            alpha=flags.ALPHA,
+            autotune=flags.autotune,
+            alpha=float(-flags.ACT_DIM) if flags.autotune else flags.ALPHA,
             actor_lr=flags.ACTOR_LR,
             critic_lr=flags.CRITIC_LR,
             temperature=flags.temperature,
@@ -262,6 +264,9 @@ class Learner(object):
                             loss = {}
                             loss['critic_loss'] = critic_loss.item()
                             loss['actor_loss'] = actor_loss.item()
+                            if self.flags.autotune:
+                                for i in range(self.flags.num_ensemble):
+                                    loss['alpha_{}'.format(i)] = self.agent.alg.alpha[i]
                             wandb.log(loss, step=self.total_steps)
 
             learn_time = time.time() - start
