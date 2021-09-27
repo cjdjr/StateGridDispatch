@@ -217,10 +217,10 @@ class Learner(object):
             th.setDaemon(True)
             th.start()
 
-    def checkpoint(self, checkpoint_path=None, obs_statistics_path=None):
+    def checkpoint(self, steps, checkpoint_path=None, obs_statistics_path=None):
         if self.flags.checkpoint:
             if checkpoint_path is None:
-                checkpoint_path = self.flags.checkpoint
+                checkpoint_path = self.flags.checkpoint[:-4] + "_" + str(steps) + ".tar"
                 obs_statistics_path = self.flags.obs_statistics
             logging.info("Saving checkpoint to %s", checkpoint_path)
             torch.save(self.agent.alg.get_state_dict(),checkpoint_path)
@@ -301,7 +301,7 @@ class Learner(object):
                     while self.total_steps // self.flags.SAVE_EVERY_STEPS > self.save_cnt:
                         self.save_cnt += 1
                     with self.model_lock:
-                        self.checkpoint()
+                        self.checkpoint(self.total_steps)
                         # logging.info(os.getcwd())
                         # self.agent.save(os.path.join(self.flags.SAVE_DIR, "model-{}".format(self.total_steps)))
                         # self.agent.save(os.path.join(self.flags.SAVE_DIR, "model-{}".format(self.total_steps)))

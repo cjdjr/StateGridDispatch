@@ -175,7 +175,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     act_timeout_context = TimeoutContext(act_timeout)
     last_obs = None
     last_action = None
-    data = Data("ensemble_3_checkpoint_750129")
+    data = Data("ensemble_3_1.0_checkpoint_1000042")
     # data = Data("test-1234-15")
     for step in range(episode_max_steps):
         try:
@@ -211,9 +211,10 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
             break
     print("step: ",sum_steps)
     print("info: ",info)
+    print("score: ",sum_reward)
     steps.append(sum_steps)
     infos.append(info)
-    data.plot()
+    # data.plot()
     return sum_reward
 
 
