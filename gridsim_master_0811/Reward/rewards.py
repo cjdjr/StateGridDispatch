@@ -66,7 +66,11 @@ def EPRIReward(obs, last_obs, settings):
 
 def TrainReward(obs, last_obs, settings):
     r = settings.coeff_line_over_flow * line_over_flow_reward(obs, settings) + \
-        settings.coeff_balanced_gen * balanced_gen_reward(obs, settings)
+        settings.coeff_renewable_consumption * renewable_consumption_reward(obs, settings) + \
+        settings.coeff_running_cost * running_cost_reward(obs, last_obs, settings) + \
+        settings.coeff_balanced_gen * balanced_gen_reward(obs, settings) + \
+        2 * settings.coeff_gen_reactive_power * gen_reactive_power_reward(obs, settings) + \
+        settings.coeff_sub_voltage * sub_voltage_reward(obs, settings)
     return r
 
 def AllReward(obs, last_obs, settings):
