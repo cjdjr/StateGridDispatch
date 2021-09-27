@@ -22,24 +22,24 @@ class GridAgent(object):
     def predict(self, obs):
         obs = torch.FloatTensor(obs.reshape(1, -1)).to(self.device)
 
-        # mean_action = np.tanh(self.models[2].policy(obs)[0])
-        mean_action = None
-        for i in range(self.num_ensemble):
-            action = torch.tanh(self.models[i].policy(obs)[0])
-            if i==0:
-                mean_action = action
-            else:
-                mean_action += action
-        mean_action/=self.num_ensemble
-        action_numpy = mean_action.cpu().detach().numpy().flatten()
-
-        # max_score, best_act = None, None
+        # mean_action = torch.tanh(self.models[0].policy(obs)[0])
+        # mean_action = None
         # for i in range(self.num_ensemble):
         #     action = torch.tanh(self.models[i].policy(obs)[0])
-        #     score = self.get_score(obs, action)
-        #     if i==0 or score>max_score:
-        #         max_score = score
-        #         best_act = action
-        # action_numpy = best_act.cpu().detach().numpy().flatten()
+        #     if i==0:
+        #         mean_action = action
+        #     else:
+        #         mean_action += action
+        # mean_action/=self.num_ensemble
+        # action_numpy = mean_action.cpu().detach().numpy().flatten()
+
+        actions = []
+        scores = []
+        for i in range(self.num_ensemble):
+            action = torch.tanh(self.models[i].policy(obs)[0])
+            actions.append(action)
+            scores.append(self.get_score(obs, action))
+        best_act = actions[np.argmax(scores)]
+        action_numpy = best_act.cpu().detach().numpy().flatten()
 
         return action_numpy
