@@ -2,7 +2,7 @@ import os
 os.environ['PARL_BACKEND'] = 'torch'
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/gridsim_master_0811")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/gridsim_master_0910")
 
 import logging
 import hydra
@@ -13,19 +13,16 @@ import torch
 import threading
 import time
 import parl
-# from parl.utils import ReplayMemory
-# from parl.algorithms import SAC
 from parl.utils.window_stat import WindowStat
 
-from gridsim_master_0811.Environment.base_env import Environment
-from gridsim_master_0811.utilize.settings import settings
+from gridsim_master_0910.Environment.base_env import Environment
+from gridsim_master_0910.utilize.settings import settings
 
 from model.grid_agent import Ensemble_SAC_GridAgent
 from model.grid_model import GridModel
 from model.replaybuffer import EnsembleReplayMemory
 from model.env_wrapper import wrap_env
 from model.algo import Ensemble_SAC
-# from gridsim_master_0811.env_wrapper import get_env
 def get_common_flags(flags):
     flags = OmegaConf.to_container(flags)
     flags["SAVE_DIR"] = os.getcwd()
@@ -34,7 +31,8 @@ def get_common_flags(flags):
 def get_learner_flags(flags):
     lrn_flags = OmegaConf.to_container(flags)
     lrn_flags["checkpoint"] = os.path.join(flags["SAVE_DIR"], "checkpoint.tar")
-    lrn_flags["obs_statistics"] = os.path.join(flags["SAVE_DIR"], "obs_statistics.npy")
+    lrn_flags["output_obs_statistics"] = os.path.join(flags["SAVE_DIR"], "output_obs_statistics.npy")
+    lrn_flags["input_obs_statistics"] = os.path.join(flags["SAVE_DIR"], "input_obs_statistics.npy")
     return OmegaConf.create(lrn_flags)
 
 def get_env(flags):
@@ -42,8 +40,8 @@ def get_env(flags):
     # env = Environment(settings, "TrainReward")
     obs_statistics = None
     if flags.whiten:
-        path = '/data1/wangmr/StateGridDispatch'
-        mean,std = np.load(path+'/obs_statistics.npy')
+        path = flags.input_obs_statistics
+        mean,std = np.load(path)
         obs_statistics={
             'mean':mean,
             'std':std
@@ -221,7 +219,7 @@ class Learner(object):
         if self.flags.checkpoint:
             if checkpoint_path is None:
                 checkpoint_path = self.flags.checkpoint[:-4] + "_" + str(steps) + ".tar"
-                obs_statistics_path = self.flags.obs_statistics
+                obs_statistics_path = self.flags.output_obs_statistics
             logging.info("Saving checkpoint to %s", checkpoint_path)
             torch.save(self.agent.alg.get_state_dict(),checkpoint_path)
 
@@ -325,6 +323,13 @@ def main(flags: DictConfig):
     OmegaConf.save(flags, "config.yaml")
     flags = get_common_flags(flags)
     flags = get_learner_flags(flags)
+
+    if flags.whiten:
+        path = os.path.dirname(os.path.abspath(__file__))+"/obs_statistics.npy"
+        assert os.path.exists(path), "Can not find {}".format(path)
+        from shutil import copyfile
+        copyfile(path, "./input_obs_statistics.npy")
+
     if flags.wandb:
         wandb.init(
             name=flags.run_name or flags.default_run_name,

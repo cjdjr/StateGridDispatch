@@ -1,7 +1,7 @@
 ﻿# -*- coding: UTF-8 -*-
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/gridsim_master_0811")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/gridsim_master_0910")
 
 ERROR_INFO_LIMIT = 100 # limit 100 characters
 
@@ -109,8 +109,8 @@ import copy
 import numpy as np
 
 
-from gridsim_master_0811.Environment.base_env import Environment
-from gridsim_master_0811.utilize.settings import settings
+from gridsim_master_0910.Environment.base_env import Environment
+from gridsim_master_0910.utilize.settings import settings
 
 class Data(object):
     def __init__(self, name="") -> None:
@@ -227,7 +227,7 @@ def eval(submit_file=None):
     ACT_TIMEOUT = 1 # seconds, the time limit of each step
     RUN_TIMEOUT=1800 # seconds, the time limit of the whole evaluation
 
-    from gridsim_master_0811.utilize.settings import settings
+    from gridsim_master_0910.utilize.settings import settings
     
     try:
         from submission.agent import Agent
