@@ -91,8 +91,8 @@ class GridModel_share(parl.Model):
         self.l1 = nn.Linear(self.gen_num * self.embedding_dim + 256, 256)
 
         self.actor_head = ActorModel_share(256, action_dim, flags)
-        self.critic_head = CriticModel_share(256, action_dim, flags)
-        # self.critic_head = CriticModel(obs_dim, action_dim, flags)
+        # self.critic_head = CriticModel_share(256, action_dim, flags)
+        self.critic_head = CriticModel(obs_dim, action_dim, flags)
 
     def _get_core(self, obs):
         core = []
@@ -120,9 +120,9 @@ class GridModel_share(parl.Model):
         return self.actor_head(core)
 
     def value(self, obs, action):
-        core = self._get_core(obs)
-        return self.critic_head(core, action)
-        # return self.critic_head(obs, action)
+        # core = self._get_core(obs)
+        # return self.critic_head(core, action)
+        return self.critic_head(obs, action)
 
     def get_actor_params(self):
         ignored_params = list(map(id, self.critic_head.parameters()))

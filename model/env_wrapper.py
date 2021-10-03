@@ -92,8 +92,8 @@ class ObsTransformerWrapper(Wrapper):
 
     def _get_obs(self, obs):
 
-        return feature_process(self.settings, obs, self.obs_statistics)
-        # return share_feature_process(self.settings, obs, self.obs_statistics)
+        # return feature_process(self.settings, obs, self.obs_statistics)
+        return share_feature_process(self.settings, obs, self.obs_statistics)
 
     def step(self, action, **kwargs):
         self.raw_obs, reward, done, info = self.env.step(action, **kwargs)

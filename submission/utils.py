@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-RENEWABLE_COEF = 0.15
+RENEWABLE_COEF = 0.1
 
 def wrap_action(adjust_gen_p):
     act = {
@@ -34,7 +34,7 @@ def share_feature_process(settings, obs, dict=None):
     action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
     action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
     for id in settings.renewable_ids:
-        action_space_low[id] = action_space_high[id]
+        action_space_low[id] = action_space_high[id] - RENEWABLE_COEF * (action_space_high[id] - action_space_low[id])
     action_space_low[settings.balanced_id] = 0.0
     action_space_high[settings.balanced_id] = 0.0
     
