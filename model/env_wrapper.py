@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 from parl.utils import logger
-from utils import feature_process, action_process
+from utils import feature_process, action_process, share_feature_process
 
 class Wrapper(gym.Env):
     """Wraps the environment to allow a modular transformation.
@@ -93,6 +93,7 @@ class ObsTransformerWrapper(Wrapper):
     def _get_obs(self, obs):
 
         return feature_process(self.settings, obs, self.obs_statistics)
+        # return share_feature_process(self.settings, obs, self.obs_statistics)
 
     def step(self, action, **kwargs):
         self.raw_obs, reward, done, info = self.env.step(action, **kwargs)
@@ -187,7 +188,7 @@ class RewardWrapper(Wrapper):
         # training_reward = 1.0
         training_reward = reward
         if done and not info["timeout"]:
-            training_reward -= 10.0
+            training_reward -= 50.0
         info["origin_reward"] = reward
         return obs, training_reward, done, info
 

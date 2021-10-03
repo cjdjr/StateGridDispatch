@@ -175,7 +175,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     act_timeout_context = TimeoutContext(act_timeout)
     last_obs = None
     last_action = None
-    data = Data("ensemble_3_1.0_checkpoint_1000042")
+    data = Data("0811")
     # data = Data("test-1234-15")
     for step in range(episode_max_steps):
         try:
@@ -214,7 +214,7 @@ def run_one_episode(env, seed, start_idx, episode_max_steps, agent, act_timeout)
     print("score: ",sum_reward)
     steps.append(sum_steps)
     infos.append(info)
-    # data.plot()
+    data.plot()
     return sum_reward
 
 
@@ -254,6 +254,7 @@ def eval(submit_file=None):
             scores = []
             np.random.seed(1234)
             idx = np.random.randint(settings.num_sample, size=20)
+            idx = [17861]
             # 1 -> step = 40
             for start_idx in idx:
                 # start_idx = 4654

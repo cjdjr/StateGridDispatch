@@ -87,11 +87,11 @@ class SAC(parl.Algorithm):
     def _critic_learn(self, obs, action, reward, next_obs, terminal):
         with torch.no_grad():
             next_action, next_log_pro = self.sample(next_obs)
-            q1_next, q2_next = self.target_model.critic_model(
+            q1_next, q2_next = self.target_model.value(
                 next_obs, next_action)
             target_Q = torch.min(q1_next, q2_next) - self.alpha * next_log_pro
             target_Q = reward + self.gamma * (1. - terminal) * target_Q
-        cur_q1, cur_q2 = self.model.critic_model(obs, action)
+        cur_q1, cur_q2 = self.model.value(obs, action)
 
         critic_loss = F.mse_loss(cur_q1, target_Q) + F.mse_loss(
             cur_q2, target_Q)
@@ -103,7 +103,7 @@ class SAC(parl.Algorithm):
 
     def _actor_learn(self, obs):
         act, log_pi = self.sample(obs)
-        q1_pi, q2_pi = self.model.critic_model(obs, act)
+        q1_pi, q2_pi = self.model.value(obs, act)
         min_q_pi = torch.min(q1_pi, q2_pi)
         actor_loss = ((self.alpha * log_pi) - min_q_pi).mean()
 
@@ -331,12 +331,12 @@ class Ensemble_SAC(parl.Algorithm):
         
         for i in range(self.num_ensemble):
             with torch.no_grad():
-                q1_next, q2_next = self.target_model[i].critic_model(
+                q1_next, q2_next = self.target_model[i].value(
                     next_obs, next_action[i])
                 target_Q = torch.min(q1_next, q2_next) - self.alpha[i] * next_log_pro[i]
                 target_Q = reward + self.gamma * (1. - terminal) * target_Q
             mask = masks[:,i]
-            cur_q1, cur_q2 = self.model[i].critic_model(obs, action)
+            cur_q1, cur_q2 = self.model[i].value(obs, action)
             q1_loss = F.mse_loss(cur_q1, target_Q) * mask * weight_target_Q.detach()
             q2_loss = F.mse_loss(cur_q2, target_Q) * mask * weight_target_Q.detach()
             q1_loss = q1_loss.sum() / (mask.sum()+1)
@@ -358,7 +358,7 @@ class Ensemble_SAC(parl.Algorithm):
         actor_loss_mean = None
         act, log_pi = self.sample(obs)
         for i in range(self.num_ensemble):
-            q1_pi, q2_pi = self.model[i].critic_model(obs, act[i])
+            q1_pi, q2_pi = self.model[i].value(obs, act[i])
             min_q_pi = torch.min(q1_pi, q2_pi)
             mask = masks[:,i]
             actor_loss = ((self.alpha[i] * log_pi[i]) - min_q_pi) * mask

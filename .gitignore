@@ -14,3 +14,5 @@ test_result.txt
 submission_test/
 figure/
 *.npy
+parser.csv
+select_data.py

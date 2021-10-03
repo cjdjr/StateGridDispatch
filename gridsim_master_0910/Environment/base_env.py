@@ -277,6 +277,7 @@ class Environment:
             "gen_reactive_power_reward": gen_reactive_power_reward,
             "sub_voltage_reward": sub_voltage_reward,
             "AllReward": AllReward,
+            "TrainReward": TrainReward,
         }
         reward_func = reward_dict[self.reward_type]
         return reward_func(obs, last_obs, settings)

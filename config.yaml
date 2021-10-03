@@ -2,16 +2,20 @@ wandb: true
 project: griddispatch_challenge
 entity: chelly
 group: group3
-run_name: Ensemble_5-without_white-${now:%Y%m%dT%H%M%S}
+run_name: Ensemble_3-without_white-mlp-coef0.15-${now:%Y%m%dT%H%M%S}
 default_run_name: Test-${now:%Y%m%dT%H%M%S}
 
 whiten: false
 autotune: false
 
 # Ensemble SAC
-num_ensemble: 5
+num_ensemble: 3
 temperature: 20           # weighted Bellman backups , 10, 20, 50
 ber_mean: 1.0
+
+gen_num: 54
+gen_input_dim: 7
+embedding_dim: 16
 
 WARMUP_STEPS: 10000          # 开始训练需要收集的时间步数（在达到这个步数之前智能体采用随机策略）
 MEMORY_SIZE:  1000000       # 经验池大小

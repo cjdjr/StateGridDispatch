@@ -19,7 +19,7 @@ from gridsim_master_0910.Environment.base_env import Environment
 from gridsim_master_0910.utilize.settings import settings
 
 from model.grid_agent import Ensemble_SAC_GridAgent
-from model.grid_model import GridModel
+from model.grid_model import GridModel, GridModel_share
 from model.replaybuffer import EnsembleReplayMemory
 from model.env_wrapper import wrap_env
 from model.algo import Ensemble_SAC
@@ -63,6 +63,7 @@ class Actor(object):
         models = []
         for i in range(flags.num_ensemble):
             model = GridModel(obs_dim, action_dim, flags)
+            # model = GridModel_share(obs_dim, action_dim, flags)
             models.append(model)
         # print(model.get_actor_params())
         # print(model.get_critic_params())
@@ -89,6 +90,7 @@ class Actor(object):
         # sample one episode
 
         self.agent.set_weights(weights)
+        # obs = self.env.reset(start_sample_idx = 17861)
         obs = self.env.reset()
         done = False
         episode_training_reward, episode_env_reward, episode_steps = 0, 0, 0
@@ -183,6 +185,7 @@ class Learner(object):
         models = []
         for i in range(num_ensemble):
             model = GridModel(obs_dim, action_dim, flags)
+            # model = GridModel_share(obs_dim, action_dim, flags)
             models.append(model)
         device = "cuda" if torch.cuda.is_available() else "cpu"
         algorithm = Ensemble_SAC(

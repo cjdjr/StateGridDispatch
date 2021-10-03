@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+
+RENEWABLE_COEF = 0.15
+
 def wrap_action(adjust_gen_p):
     act = {
         'adjust_gen_p': adjust_gen_p,
@@ -7,6 +10,52 @@ def wrap_action(adjust_gen_p):
     }
     return act
 
+def share_feature_process(settings, obs, dict=None):
+
+    loads = []
+    loads.append(obs.load_p)
+    loads.append(obs.load_q)
+    loads.append(obs.load_v)
+    loads = np.concatenate(loads)
+
+    # prods
+    prods = []
+    prods.append(obs.gen_p)
+    prods.append(obs.gen_q)
+    prods.append(obs.gen_v)
+    prods = np.concatenate(prods)
+    
+    # rho
+    rho = np.array(obs.rho) - 1.0
+
+    next_load = obs.nextstep_load_p
+
+    # action_space
+    action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
+    action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
+    for id in settings.renewable_ids:
+        action_space_low[id] = action_space_high[id]
+    action_space_low[settings.balanced_id] = 0.0
+    action_space_high[settings.balanced_id] = 0.0
+    
+    # steps_to_reconnect_line = obs.steps_to_reconnect_line.tolist()
+    steps_to_recover_gen = obs.steps_to_recover_gen.tolist()
+    gen_status = obs.gen_status.tolist()
+    # 1 stands for can be opened
+    gen_status = ((obs.gen_status == 0) & (obs.steps_to_recover_gen == 0)).astype(float).tolist()
+
+    gen_features = np.concatenate([gen_status, prods, action_space_low, action_space_high, steps_to_recover_gen])
+    gen_features = np.transpose(gen_features.reshape((7,-1))).reshape(7*settings.num_gen)
+    
+    features = np.concatenate([
+        gen_features.tolist(),
+        loads,
+        rho.tolist(), next_load
+        # gen_status
+    ])
+
+    return features
+    
 def feature_process(settings, obs, dict=None):
 
     loads = []
@@ -30,6 +79,8 @@ def feature_process(settings, obs, dict=None):
     # action_space
     action_space_low = obs.action_space['adjust_gen_p'].low.tolist()
     action_space_high = obs.action_space['adjust_gen_p'].high.tolist()
+    for id in settings.renewable_ids:
+        action_space_low[id] = action_space_high[id] - RENEWABLE_COEF * (action_space_high[id] - action_space_low[id])
     action_space_low[settings.balanced_id] = 0.0
     action_space_high[settings.balanced_id] = 0.0
     
@@ -123,7 +174,7 @@ def action_process(settings, obs, model_output_act):
     high_bound = gen_p_high_bound
 
     for id in settings.renewable_ids:
-        low_bound[id] = high_bound[id]
+        low_bound[id] = high_bound[id] - RENEWABLE_COEF * (high_bound[id] - low_bound[id])
         
     mapped_action = low_bound + (model_output_act - (-1.0)) * (
         (high_bound - low_bound) / 2.0)

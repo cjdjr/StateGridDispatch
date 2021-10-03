@@ -23,7 +23,8 @@ class Agent(object):
     def __init__(self, settings, this_directory_path):
         self.settings = settings
         
-        model_path = os.path.join(this_directory_path, "saved_model/ensemble_3_1.0_checkpoint_950160.tar")
+        # model_path = os.path.join(this_directory_path, "saved_model/ensemble_3_1.0_checkpoint_1000042.tar")
+        model_path = os.path.join(this_directory_path, "saved_model/ensemble_3_checkpoint_1150126.tar")
 
         models = []
         for i in range(num_ensemble):
